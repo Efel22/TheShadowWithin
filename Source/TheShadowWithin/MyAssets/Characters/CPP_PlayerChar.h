@@ -13,5 +13,18 @@ UCLASS()
 class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperCharacter
 {
 	GENERATED_BODY()
+
+public:
+	//~~~Functions
+
+	//---Movement Functions
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoMove(float Foward);
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoJump();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoStopJump();
 	
 };
