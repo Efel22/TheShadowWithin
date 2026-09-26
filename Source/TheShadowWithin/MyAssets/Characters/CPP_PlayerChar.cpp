@@ -15,3 +15,16 @@ ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera->SetAutoCalculateOrthoPlanes(false);
 	Camera->SetOrthoWidth(orthoWidth);
 }
+
+void ACPP_PlayerChar::DoMove(float Forward) {
+	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
+	AddMovementInput(MoveDir, Forward);
+}
+
+void ACPP_PlayerChar::DoJump() {
+	Jump();
+}
+
+void ACPP_PlayerChar::DoStopJump() {
+	StopJumping();
+}

@@ -41,7 +41,7 @@ public:
 	//--------------------------------------------------------------------------------------------------------------
 	//---Movement Functions
 	UFUNCTION(BlueprintCallable, Category = "Movement")
-	void DoMove(float Foward);
+	void DoMove(float Forward);
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoJump();
