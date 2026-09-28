@@ -2,11 +2,3 @@
 
 
 #include "MyAssets/Interfaces/CollectableInterface.h"
-
-CollectableInterface::CollectableInterface()
-{
-}
-
-CollectableInterface::~CollectableInterface()
-{
-}
