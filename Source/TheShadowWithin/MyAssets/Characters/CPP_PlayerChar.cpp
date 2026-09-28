@@ -5,6 +5,7 @@ Movement Functions
 */
 
 #include "MyAssets/Characters/CPP_PlayerChar.h"
+#include "PaperFlipbookComponent.h" // Required for sprite flipping
 #include "Camera/CameraComponent.h"
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
@@ -19,6 +20,17 @@ ACPP_PlayerChar::ACPP_PlayerChar() {
 void ACPP_PlayerChar::DoMove(float Forward) {
 	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
 	AddMovementInput(MoveDir, Forward);
+
+	// Flip the player's sprite based on the movement direction
+	if (Forward != 0.0f)
+	{
+		FVector fixedScale = GetSprite()->GetRelativeScale3D();
+
+		// Keep the original scale size and only change its direction
+		fixedScale.X = FMath::Abs(fixedScale.X) * FMath::Sign(Forward);
+
+		GetSprite()->SetRelativeScale3D(fixedScale);
+	}
 }
 
 void ACPP_PlayerChar::DoJump() {
