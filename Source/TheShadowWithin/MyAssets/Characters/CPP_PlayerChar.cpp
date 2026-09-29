@@ -7,6 +7,7 @@ Movement Functions
 #include "MyAssets/Characters/CPP_PlayerChar.h"
 #include "PaperFlipbookComponent.h" // Required for sprite flipping
 #include "Camera/CameraComponent.h"
+#include "Engine/Engine.h" // Used to print strings
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -39,4 +40,13 @@ void ACPP_PlayerChar::DoJump() {
 
 void ACPP_PlayerChar::DoStopJump() {
 	StopJumping();
+}
+
+// *******************************************************************************
+//                             REMOVE DARKNESS
+// *******************************************************************************
+// ?: Executes death/defeat logic
+void ACPP_PlayerChar::Die()
+{
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("PLAYER HAS BEEN UNALIVED!!! :O"));
 }
