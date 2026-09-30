@@ -48,29 +48,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoMove(float Forward);
 
-	UFUNCTION(BlueprintCallable, Category = "Movement|Vine")
+	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoClimbVine(float Forward);
-
-	UFUNCTION(BlueprintCallable, Category = "Movement|Vine")
-	void StartClimbingVine();
-
-	UFUNCTION(BlueprintCallable, Category = "Movement|Vine")
-	void StopClimbingVine();
-
-	UFUNCTION(BlueprintCallable, Category = "Movement|Vine")
-	void StopHorizontalMovement();
-
-	UFUNCTION(BlueprintCallable, Category = "Movement|Vine")
-	void StopVerticalMovement();
-
-	UFUNCTION(BlueprintCallable, Category = "Movement|Vine")
-	void FaceVine();
-
-	UFUNCTION()
-	void SetVine_PosX(float _value) { currentVine_PosX = _value;  }
-
-	// Stores the last vine's x position that was grabed
-	float currentVine_PosX = 0.f;
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoJump();

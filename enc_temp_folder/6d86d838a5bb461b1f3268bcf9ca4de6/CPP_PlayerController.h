@@ -60,24 +60,12 @@ protected:
 	UFUNCTION()
 	void ClimbVine(const FInputActionValue& Value);
 
-	// Stops movement in the horizontal axis
-	// ?: Used to prevent sliding when A/D keys are released when hanging on a vine
-	UFUNCTION()
-	void StopMove_Horizontal();
-
-	// Stops movement in the vertical axis
-	// ?: Used to prevent sliding when W/S keys are released when hanging on a vine
-	UFUNCTION()
-	void StopMove_Vertical();
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsHoldingVine = false;
 
 public:
 
 	UFUNCTION(BlueprintCallable)
-	void SetIsHoldingVine(bool _value, float vine_pos_x = 0.0f);
+	void SetIsHoldingVine(bool _value) { bIsHoldingVine = _value; }
 
-	UFUNCTION(BlueprintCallable)
-	bool GetIsHoldingVine() { return bIsHoldingVine; }
 };

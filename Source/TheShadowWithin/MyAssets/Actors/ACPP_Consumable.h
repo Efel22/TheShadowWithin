@@ -8,6 +8,9 @@
 class UPaperSpriteComponent;
 class ACPP_PlayerChar;
 class USphereComponent;
+class UNiagaraSystem; // Required for playing niagara systems
+class UNiagaraComponent; // Required for niagara particle components
+class USoundBase; // Required for sound base
 
 UCLASS()
 class THESHADOWWITHIN_API ACPP_Consumable 
@@ -29,8 +32,20 @@ public:
 protected:
 
 	// Sprite displayed in the world
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Visual")
 	UPaperSpriteComponent* SpriteComponent;
+
+	// Attached particles
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Visual")
+	UNiagaraComponent* ConsumableParticlesComponent;
+
+	// Sound that plays when the item is collected
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components | Audio")
+	USoundBase* CollectSound;
+
+	// Particles that play when the item is collected
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components | Audio")
+	UNiagaraSystem* CollectionParticles;
 
 	// Area used to detect when the player gets close enough
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
