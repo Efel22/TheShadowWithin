@@ -8,6 +8,10 @@
 #include "MyAssets/Characters/CPP_PlayerController.h" // Required for player controller functionality
 #include "Blueprint/UserWidget.h" // Required to show specified widget from header file
 #include "Components/SphereComponent.h" // Required for sphere col. component usage
+#include "Kismet/GameplayStatics.h" // Required for play_sound usage
+#include "NiagaraSystem.h" // Required for niagara system usage
+#include "NiagaraComponent.h" // Required for niagara component 
+#include "NiagaraFunctionLibrary.h" // Required for spawning niagara systems
 
 // *******************************************************************************
 //                             CONSTRUCTOR
@@ -22,6 +26,11 @@ AACPP_WinVolume::AACPP_WinVolume()
 	// Create the sprite component
 	SpriteComponent = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
 	SpriteComponent->SetupAttachment(RootComponent);
+
+	// Niagra component setup
+	WinParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("WinParticlesComponent"));
+	WinParticlesComponent->SetupAttachment(RootComponent);
+	WinParticlesComponent->bAutoActivate = false; 
 
 	// Create the sphere component
 	WinSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollectionSphereComponent"));
@@ -110,6 +119,21 @@ void AACPP_WinVolume::OnWinSphereOverlap(
 		PlayerController->SetInputMode(InputMode);
 	}
 
+	// Play the sound
+	if (WinSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			WinSound,
+			GetActorLocation(),
+			1.0f, // VOLUME
+			FMath::FRandRange(0.8f, 1.2f) // PITCH
+		);
+	}
+
+	// Play the particles
+	if (WinParticles) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), WinParticles, GetActorLocation());
+
 	// Prevent the WinBox from triggering again
 	bHasWon = true;
+
 }
