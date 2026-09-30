@@ -2,6 +2,10 @@
 #include "MyAssets/Characters/CPP_PlayerChar.h"
 #include "PaperSpriteComponent.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h" // Required for play_sound usage
+#include "NiagaraSystem.h" // Required for niagara system usage
+#include "NiagaraComponent.h" // Required for niagara component 
+#include "NiagaraFunctionLibrary.h" // Required for spawning niagara systems
 
 // *******************************************************************************
 //                             CONSTRUCTOR
@@ -16,6 +20,11 @@ ACPP_Consumable::ACPP_Consumable()
 	// Create the sprite component
 	SpriteComponent = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
 	SpriteComponent->SetupAttachment(RootComponent);
+
+	// Niagra component setup
+	ConsumableParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ConsumableParticlesComponent"));
+	ConsumableParticlesComponent->SetupAttachment(RootComponent);
+	ConsumableParticlesComponent->bAutoActivate = false; // ?: no arranca prendido, solo cuando se gana
 
 	// Create the sphere component
 	CollectionSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollectionSphereComponent"));
@@ -79,6 +88,20 @@ void ACPP_Consumable::Collect(ACPP_PlayerChar* Player)
 	{
 		Destroy();
 	}
+
+	// Play the sound
+	if (CollectSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			CollectSound,
+			GetActorLocation(),
+			1.0f, // VOLUME
+			FMath::FRandRange(0.8f, 1.2f) // PITCH
+		);
+	}
+	
+	// Play the particles
+	if (CollectionParticles) UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), CollectionParticles, GetActorLocation());
 }
 
 bool ACPP_Consumable::RequiresInput() const

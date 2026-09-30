@@ -10,6 +10,9 @@ class UPaperSpriteComponent; // Required for sprite usage
 class UBoxComponent; // Required for Box Collision usage
 class UUserWidget; // Required for widgets
 class USphereComponent;
+class UNiagaraSystem; // Required for playing niagara systems
+class UNiagaraComponent; // Required for niagara particle components
+class USoundBase; // Required for sound base
 
 UCLASS()
 class THESHADOWWITHIN_API AACPP_WinVolume : public AActor
@@ -27,8 +30,20 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Sprite displayed in the world
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Win Volume")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Win Volume | Visual")
 	UPaperSpriteComponent* SpriteComponent;
+
+	// Attached particles
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Win Volume | Visual")
+	UNiagaraComponent* WinParticlesComponent;
+
+	// Sound that plays when the item is collected
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Win Volume | Audio")
+	USoundBase* WinSound;
+
+	// Particles that play when the item is collected
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Win Volume | Visual")
+	UNiagaraSystem* WinParticles;
 
 	// Area used to detect when the player gets close enough
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Win Volume")
