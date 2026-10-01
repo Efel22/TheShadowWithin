@@ -7,6 +7,7 @@ Movement Functions
 #include "MyAssets/Characters/CPP_PlayerChar.h"
 #include "PaperFlipbookComponent.h" // Required for sprite flipping
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -38,5 +39,8 @@ void ACPP_PlayerChar::DoJump() {
 }
 
 void ACPP_PlayerChar::DoStopJump() {
+	if (GetCharacterMovement()->Velocity.Z > 0) {
+		GetCharacterMovement()->Velocity.Z *= jumpCutOff;
+	}
 	StopJumping();
 }
