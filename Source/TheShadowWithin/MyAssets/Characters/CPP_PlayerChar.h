@@ -29,6 +29,9 @@ public:
 	UCameraComponent* GetCamera() const { return Camera; }
 
 protected:
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
+
 	//~~~Properties
 	// Player camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character|Camera", meta = (AllowPrivateAccess = "true"))
@@ -89,5 +92,19 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	bool IsDead() { return isDead; }
+
+	//--------------------------------------------------------------------------------------------------------------
+
+	//~~~RESPAWN LOGIC
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Respawn|Location")
+	FVector RespawnLocation;
+
+	UFUNCTION(BlueprintCallable, Category = "Respawn")
+	void SetRespawnPoint(FVector _value) { RespawnLocation = _value; }
+
+	UFUNCTION(BlueprintCallable, Category = "Respawn")
+	FVector GetRespawnPoint() { return RespawnLocation; }
+
 
 };
