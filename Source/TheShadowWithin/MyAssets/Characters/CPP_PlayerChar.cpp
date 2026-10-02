@@ -21,6 +21,15 @@ ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera->SetOrthoWidth(orthoWidth);
 }
 
+
+// Called when the game starts or when spawned
+void ACPP_PlayerChar::BeginPlay()
+{
+	Super::BeginPlay();
+
+	SetRespawnPoint(GetActorLocation());
+}
+
 void ACPP_PlayerChar::DoMove(float Forward) {
 	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
 	AddMovementInput(MoveDir, Forward);

@@ -57,6 +57,10 @@ void ACPP_Vine::Tick(float DeltaTime)
 
 }
 
+
+// *******************************************************************************
+//                             DETECTION BOX OVERLAP
+// *******************************************************************************
 void ACPP_Vine::OnDetectionBoxBeginOverlap(
 	UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor,
