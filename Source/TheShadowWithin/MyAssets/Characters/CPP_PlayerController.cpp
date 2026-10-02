@@ -7,6 +7,7 @@ Movement Functions
 #include "MyAssets/Characters/CPP_PlayerController.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Engine/Engine.h"
 #include "MyAssets/Characters/CPP_PlayerChar.h"
 
 void ACPP_PlayerController::OnPossess(APawn* InPawn)
@@ -39,8 +40,11 @@ void ACPP_PlayerController::SetupInputComponent()
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::Move);
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopMove_Horizontal);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACPP_PlayerController::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopJumping);
+		EnhancedInputComponent->BindAction(ClimbVineAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::ClimbVine);
+		EnhancedInputComponent->BindAction(ClimbVineAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopMove_Vertical);
 		
 	}
 }
@@ -57,4 +61,74 @@ void ACPP_PlayerController::Jump() {
 
 void ACPP_PlayerController::StopJumping() {
 	PlayerCharacter->DoStopJump();
+}
+
+void ACPP_PlayerController::ClimbVine(const FInputActionValue& Value) {
+
+	
+	if (!bIsHoldingVine)
+		return;
+
+	FVector2D MoveVector = Value.Get<FVector2D>();
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			0.0f,
+			FColor::Yellow,
+			FString::Printf(
+				TEXT("CLIMB -> X: %.2f | Y: %.2f"),
+				MoveVector.X,
+				MoveVector.Y
+			)
+		);
+	}
+	
+	// Safety Check
+	if (!PlayerCharacter) return;
+	PlayerCharacter->DoClimbVine(MoveVector.Y);
+
+	/*if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, TEXT("PC -> ClimbVine"));
+
+	if (bIsHoldingVine)
+	{
+
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, TEXT("PC -> ClimbVine -> IsHoldingVine"));
+		FVector2D MoveVector = Value.Get<FVector2D>();
+		PlayerCharacter->DoClimbVine(MoveVector.X);
+	}*/
+}
+
+// ?: Used to prevent horizontal sliding when holding onto a vine, executed
+//    after letting go of the A/D keys
+void ACPP_PlayerController::StopMove_Horizontal()
+{
+	if (bIsHoldingVine && PlayerCharacter)
+	{
+		PlayerCharacter->StopHorizontalMovement();
+	}
+}
+
+// ?: Used to prevent vertical sliding when holding onto a vine, executed
+//    after letting go of the vine
+void ACPP_PlayerController::StopMove_Vertical()
+{
+	if (bIsHoldingVine && PlayerCharacter)
+	{
+		PlayerCharacter->StopVerticalMovement();
+	}
+}
+
+void ACPP_PlayerController::SetIsHoldingVine(bool _value, float vine_pos_x) {
+	if (_value)
+	{
+		PlayerCharacter->StartClimbingVine();
+		PlayerCharacter->SetVine_PosX(vine_pos_x);
+	}
+	else {
+		PlayerCharacter->StopClimbingVine();
+	}
+
+	bIsHoldingVine = _value; 
 }

@@ -17,7 +17,8 @@ public class TheShadowWithin : ModuleRules
 			"AIModule",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
-			"UMG",
+            "Niagara",
+            "UMG",
 			"Slate"
 		});
 
