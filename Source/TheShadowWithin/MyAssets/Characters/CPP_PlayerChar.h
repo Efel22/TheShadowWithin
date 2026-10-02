@@ -42,6 +42,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|CameraMovements")
 	float orthoWidth = 7000;
 
+	//Jump
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
+	float jumpCutOff = 0.f;
 
 public:
 	//~~~Functions

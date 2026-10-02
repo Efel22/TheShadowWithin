@@ -8,7 +8,7 @@
 #include "ACPP_Enemy_Basic.generated.h"
 
 
-
+//class UBoxComponent;
 class ACPP_PlayerChar;
 
 UCLASS()
@@ -24,6 +24,11 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	//Attack Collider
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	//UBoxComponent* AttackCollider;
+
+
 	// Player Char. reference
 	UPROPERTY()
 	ACPP_PlayerChar* PlayerCharRef;
@@ -35,6 +40,14 @@ protected:
 	// Enemy's movement speed (FOR NOW
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components | Enemy")
 	float FMovementSpeed = 250.f;
+
+	//~~~Jumping timer
+	FTimerHandle JumpTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
+	float jumpTime = 5.f;
+
+	void EnemyJump();
 
 private:
 	// Stores the original scale in case the scale isn't 1.f

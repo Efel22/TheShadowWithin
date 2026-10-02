@@ -34,6 +34,8 @@ void AACPP_Enemy_Basic::BeginPlay()
 
 	// Store the original scale
 	originalScale = GetActorScale();
+
+	GetWorldTimerManager().SetTimer(JumpTimer, this, &AACPP_Enemy_Basic::EnemyJump, jumpTime, true);
 }
 
 // *******************************************************************************
@@ -71,6 +73,15 @@ void AACPP_Enemy_Basic::Tick(float DeltaTime)
 
 		// Moves the enemy in the 'x' axis in the direction that faces the player
 		AddMovementInput(FVector(1.f, 0.f, 0.f), direction);
+
+		/*int verticalDirection = FMath::Sign(
+			PlayerCharRef->GetActorLocation().Z - GetActorLocation().Z
+		);
+
+		if (verticalDirection > 0) {
+			Jump();
+		}*/
+
 	}
 
 }
@@ -80,5 +91,16 @@ void AACPP_Enemy_Basic::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+//After set amount of time passes the enemy jumps based on is the player has the higher ground
+void AACPP_Enemy_Basic::EnemyJump() {
+	int verticalDirection = FMath::Sign(
+		PlayerCharRef->GetActorLocation().Z - GetActorLocation().Z
+	);
+
+	if (verticalDirection > 0) {
+		Jump();
+	}
 }
 

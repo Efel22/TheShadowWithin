@@ -81,6 +81,9 @@ void ACPP_PlayerChar::DoJump() {
 }
 
 void ACPP_PlayerChar::DoStopJump() {
+	if (GetCharacterMovement()->Velocity.Z > 0) {
+		GetCharacterMovement()->Velocity.Z *= jumpCutOff;
+	}
 	StopJumping();
 }
 
