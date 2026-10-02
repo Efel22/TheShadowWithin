@@ -57,6 +57,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Teleport")
 	void UnlockAbility() { SetUnlocked(true); }
 
+	// ---------- Facing ----------
+	/** Call this wherever the character flips its X scale, passing the same direction
+	 *  value (> 0 = right, < 0 = left, 0 is ignored). Throws then follow it exactly. */
+	UFUNCTION(BlueprintCallable, Category = "Teleport")
+	void SetFacingDirection(float Direction);
+
+	/** 1 = facing right, -1 = facing left. */
+	UFUNCTION(BlueprintPure, Category = "Teleport")
+	float GetFacingSign() const { return FacingSign; }
+
 	UFUNCTION(BlueprintPure, Category = "Teleport")
 	bool IsUnlocked() const { return bUnlocked; }
 
@@ -91,8 +101,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Teleport")
 	ACPP_TeleportShard* GetActiveProjectile() const { return ActiveProjectile.Get(); }
 
-	/** Horizontal direction the character faces. Default = actor forward with Z removed.
-	 *  Override in BP if you flip the sprite with scale instead of rotating the actor. */
+	/** Horizontal throw direction: world +X or -X, based on SetFacingDirection
+	 *  (or the sprite's X-scale sign if that is never called). Override in BP for custom facing. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Teleport")
 	FVector GetThrowForwardDirection() const;
 
@@ -156,6 +166,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Throw")
 	bool bAddOwnerVelocity = false;
 
+	/** Only used if SetFacingDirection is never called: tick if your sprite art faces LEFT at scale 1. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Throw")
+	bool bSpriteArtFacesLeft = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Throw")
 	float SpawnForwardOffset = 30.f;
 
@@ -164,7 +178,7 @@ public:
 
 	/** Seconds each aim pose is shown while holding. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Aim", meta = (ClampMin = "0.05"))
-	float AimCycleInterval = 0.35f;
+	float AimCycleInterval = 1.0f;
 
 	/** true: 0-1-2-3-2-1-0...  false: 0-1-2-3-0-1... */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Aim")
@@ -207,6 +221,8 @@ private:
 	int32 AimIndex = 0;
 	int32 AimStep = 1;
 	bool bIsTeleporting = false;
+	float FacingSign = 1.f;
+	bool bHasExplicitFacing = false;
 
 	TWeakObjectPtr<ACPP_TeleportShard> ActiveProjectile;
 	FTimerHandle AimCycleTimer;

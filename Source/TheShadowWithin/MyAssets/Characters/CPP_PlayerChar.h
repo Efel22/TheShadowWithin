@@ -14,7 +14,7 @@ Movement Functions
 class UCameraComponent;
 
 /**
- * 
+ *
  */
 UCLASS()
 class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperCharacter
@@ -24,7 +24,7 @@ class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperCharacter
 public:
 	ACPP_PlayerChar();
 
-	// Returns the player's camera 
+	// Returns the player's camera
 	// **NOTE: (USED IN THE GAMEMODE FOR THE DARKNESS EFFECT)
 	UCameraComponent* GetCamera() const { return Camera; }
 
@@ -70,7 +70,7 @@ public:
 	void FaceVine();
 
 	UFUNCTION()
-	void SetVine_PosX(float _value) { currentVine_PosX = _value;  }
+	void SetVine_PosX(float _value) { currentVine_PosX = _value; }
 
 	// Stores the last vine's x position that was grabed
 	float currentVine_PosX = 0.f;
@@ -81,7 +81,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoStopJump();
 	//--------------------------------------------------------------------------------------------------------------
-	
+
 	//~~~HEALTH FUNCTIONS
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -98,7 +98,7 @@ public:
 	//~~~RESPAWN LOGIC
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Respawn|Location")
-	FVector RespawnLocation;
+	FVector RespawnLocation = FVector::ZeroVector;
 
 	UFUNCTION(BlueprintCallable, Category = "Respawn")
 	void SetRespawnPoint(FVector _value) { RespawnLocation = _value; }

@@ -11,6 +11,7 @@ Movement Functions
 #include "MyAssets/Characters/CPP_PlayerController.h" // Required for Vine Player Sprite Facing (In DoMove() )
 #include "Kismet/GameplayStatics.h"                   // ^
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
+#include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -52,7 +53,8 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 
 	// Flip the player's sprite based on the movement direction
 	// **NOTE: Doesn't work if the player is holding onto a vine!
-	if (Forward != 0.0f && !PC->GetIsHoldingVine())
+	// **NOTE: (!PC || ...) prevents a crash if the PlayerController is ever null
+	if (Forward != 0.0f && (!PC || !PC->GetIsHoldingVine()))
 	{
 		FVector fixedScale = GetSprite()->GetRelativeScale3D();
 
@@ -60,6 +62,12 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 		fixedScale.X = FMath::Abs(fixedScale.X) * FMath::Sign(Forward);
 
 		GetSprite()->SetRelativeScale3D(fixedScale);
+
+		// Keep the teleport throw direction in sync with the sprite
+		if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+		{
+			Teleport->SetFacingDirection(Forward);
+		}
 	}
 }
 
@@ -86,7 +94,7 @@ void ACPP_PlayerChar::Die()
 }
 
 // *******************************************************************************
-//                             STARTCLIMBINGVINE  
+//                             STARTCLIMBINGVINE
 // *******************************************************************************
 void ACPP_PlayerChar::StartClimbingVine()
 {
@@ -96,7 +104,7 @@ void ACPP_PlayerChar::StartClimbingVine()
 }
 
 // *******************************************************************************
-//                             STOPCLIMBINGVINE  
+//                             STOPCLIMBINGVINE
 // *******************************************************************************
 void ACPP_PlayerChar::StopClimbingVine()
 {
@@ -105,7 +113,7 @@ void ACPP_PlayerChar::StopClimbingVine()
 }
 
 // *******************************************************************************
-//                             STOP HORIZONTAL MOVEMENT  
+//                             STOP HORIZONTAL MOVEMENT
 // *******************************************************************************
 // ?: STOPS horizontal sliding when on a vine
 void ACPP_PlayerChar::StopHorizontalMovement()
@@ -114,9 +122,9 @@ void ACPP_PlayerChar::StopHorizontalMovement()
 }
 
 // *******************************************************************************
-//                             STOP VERTICAL MOVEMENT  
+//                             STOP VERTICAL MOVEMENT
 // *******************************************************************************
-// ?: STOPS _vertical_ sliding when on a vine 
+// ?: STOPS _vertical_ sliding when on a vine
 //    Called from the player controller, required a boolean though
 void ACPP_PlayerChar::StopVerticalMovement()
 {
@@ -126,7 +134,7 @@ void ACPP_PlayerChar::StopVerticalMovement()
 // *******************************************************************************
 //                             FACE VINE
 // *******************************************************************************
-// ?: Overrides the Scale logic (the one that changes where the player's sprite is 
+// ?: Overrides the Scale logic (the one that changes where the player's sprite is
 //    visually looking at) and makes it so it faces the vine its climbing on instead
 void ACPP_PlayerChar::FaceVine()
 {
@@ -146,4 +154,10 @@ void ACPP_PlayerChar::FaceVine()
 	}
 
 	GetSprite()->SetRelativeScale3D(FixedScale);
+
+	// Keep the teleport throw direction in sync with the sprite
+	if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+	{
+		Teleport->SetFacingDirection(FixedScale.X);   // + = right, - = left
+	}
 }

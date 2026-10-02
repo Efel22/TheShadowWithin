@@ -7,6 +7,8 @@
 #include "TimerManager.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/MovementComponent.h"
+#include "PaperCharacter.h"
+#include "PaperFlipbookComponent.h"
 
 UTeleportAbilityComponent::UTeleportAbilityComponent()
 {
@@ -115,15 +117,57 @@ float UTeleportAbilityComponent::GetCooldownFractionRemaining() const
 	return CooldownDuration > 0.f ? FMath::Clamp(GetCooldownRemaining() / CooldownDuration, 0.f, 1.f) : 0.f;
 }
 
+void UTeleportAbilityComponent::SetFacingDirection(float Direction)
+{
+	// 0 = no input this frame: keep facing the last direction.
+	if (!FMath::IsNearlyZero(Direction))
+	{
+		FacingSign = Direction > 0.f ? 1.f : -1.f;
+		bHasExplicitFacing = true;
+	}
+}
+
 FVector UTeleportAbilityComponent::GetThrowForwardDirection_Implementation() const
 {
-	FVector Forward = GetOwner() ? GetOwner()->GetActorForwardVector() : FVector::ForwardVector;
-	Forward.Z = 0.f;
-	if (!Forward.Normalize())
+	const AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
 	{
-		Forward = FVector::ForwardVector;
+		return FVector::ForwardVector;
 	}
-	return Forward;
+
+	// The level's "right" direction. The character moves along world X (see
+	// ACPP_PlayerChar::DoMove), so use world +X directly. This stays correct even
+	// if the actor's rotation changes (e.g. Orient Rotation To Movement), which
+	// would otherwise double-flip the throw.
+	const FVector Right = FVector::ForwardVector;
+
+	float Sign = 1.f;
+	if (bHasExplicitFacing)
+	{
+		// Set by the character every time it turns (SetFacingDirection).
+		Sign = FacingSign;
+	}
+	else
+	{
+		// Fallback: read the sign of the X scale (actor root and sprite).
+		Sign = OwnerActor->GetActorScale3D().X < 0.f ? -1.f : 1.f;
+		if (const APaperCharacter* PaperChar = Cast<APaperCharacter>(OwnerActor))
+		{
+			if (const UPaperFlipbookComponent* Sprite = PaperChar->GetSprite())
+			{
+				if (Sprite->GetRelativeScale3D().X < 0.f)
+				{
+					Sign *= -1.f;
+				}
+			}
+		}
+		if (bSpriteArtFacesLeft)
+		{
+			Sign *= -1.f;
+		}
+	}
+
+	return Right * Sign;
 }
 
 // ------------------------------------------------------------------ Core flow
