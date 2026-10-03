@@ -6,6 +6,7 @@
 #include "PaperSpriteComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
+#include "Components/ArrowComponent.h" // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 #include "NiagaraFunctionLibrary.h" // Required for spawning niagara systems
 #include "Kismet/GameplayStatics.h" // Required for play_sound usage
 
@@ -31,6 +32,10 @@ ACPP_Vine::ACPP_Vine()
 	DetectionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap); // Make it so it only reacts to the pawn channel
 	DetectionBox->SetGenerateOverlapEvents(true); // Allows for overlapping events *IMPORANT*
 	
+	// Center of Vine Component
+	CenterOfVineComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("Center of Vine"));
+	CenterOfVineComponent->SetupAttachment(RootComponent);
+
 }
 
 // Called when the game starts or when spawned
@@ -86,7 +91,9 @@ void ACPP_Vine::OnDetectionBoxBeginOverlap(
 
 	// ?: Set the HoldingVine to true on the Controller, also 
 	// passes this vine's X position (used to make it so player always faces the vine)
-	PC->SetIsHoldingVine(true, GetActorLocation().X);
+	PC->SetIsHoldingVine(true, CenterOfVineComponent->GetComponentLocation().X);
+
+	
 
 	// Play Sound
 	if (GrabVineSound)
