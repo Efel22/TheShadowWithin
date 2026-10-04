@@ -45,6 +45,7 @@ void ACPP_PlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopJumping);
 		EnhancedInputComponent->BindAction(ClimbVineAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::ClimbVine);
 		EnhancedInputComponent->BindAction(ClimbVineAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopMove_Vertical);
+		EnhancedInputComponent->BindAction(SwordAtkAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordAttack);
 		
 	}
 }
@@ -118,6 +119,10 @@ void ACPP_PlayerController::StopMove_Vertical()
 	{
 		PlayerCharacter->StopVerticalMovement();
 	}
+}
+
+void ACPP_PlayerController::SwordAttack() {
+	PlayerCharacter->DoSwordAttack();
 }
 
 void ACPP_PlayerController::SetIsHoldingVine(bool _value, float vine_pos_x) {

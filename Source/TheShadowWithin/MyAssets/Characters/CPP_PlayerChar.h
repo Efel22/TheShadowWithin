@@ -12,6 +12,7 @@ Movement Functions
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
+class ACPP_Enemy_Basic;
 
 /**
  *
@@ -42,7 +43,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|CameraMovements")
 	float orthoWidth = 7000;
 
-	//Jump
+	//	Sword atributes
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Attack")
+	float swordHitBoxSize = 300;
+	//~~~Jump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
 	float jumpCutOff = 0.f;
 
@@ -83,6 +87,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoStopJump();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoSwordAttack();
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~HEALTH FUNCTIONS

@@ -12,6 +12,7 @@ Movement Functions
 #include "Kismet/GameplayStatics.h"                   // ^
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
 #include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
+#include "MyAssets/Characters/ACPP_Enemy_Basic.h"
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -31,6 +32,8 @@ void ACPP_PlayerChar::BeginPlay()
 	SetRespawnPoint(GetActorLocation());
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~Basic Movement
 void ACPP_PlayerChar::DoMove(float Forward) {
 	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
 	AddMovementInput(MoveDir, Forward);
@@ -86,6 +89,7 @@ void ACPP_PlayerChar::DoStopJump() {
 	}
 	StopJumping();
 }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // *******************************************************************************
 //                             REMOVE DARKNESS
@@ -163,4 +167,39 @@ void ACPP_PlayerChar::FaceVine()
 	{
 		Teleport->SetFacingDirection(FixedScale.X);   // + = right, - = left
 	}
+}
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Simple attacks
+void ACPP_PlayerChar::DoSwordAttack() {
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Throwing hands");
+	FHitResult hit;
+	
+	FVector start = GetActorLocation();
+	FVector end = GetActorLocation();
+	FQuat rot = FQuat(0, 0, 0, 0);
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 100.f));
+	FCollisionQueryParams traceParams;
+	traceParams.AddIgnoredActor(this);
+
+	FCollisionObjectQueryParams objectType;
+	//~~~Adds a specific object type to search, In this case it will be the pawn object type
+	objectType.AddObjectTypesToQuery(ECC_Pawn);
+
+	//Checks the orientation of the sprite to determine the correct direction the attack should face
+	if (GetSprite()->GetRelativeScale3D().X > 0) {
+		end.X = GetActorLocation().X + swordHitBoxSize;
+	}
+	else {
+		end.X = GetActorLocation().X + (-swordHitBoxSize);
+	}
+
+	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
+		
+		AACPP_Enemy_Basic* enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
+		if (enemy) {
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy hit");
+		}
+	}
+
 }

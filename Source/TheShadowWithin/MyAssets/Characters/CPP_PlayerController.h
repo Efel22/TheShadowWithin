@@ -37,6 +37,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|Movement")
 	UInputAction* ClimbVineAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input|Movement")
+	UInputAction* SwordAtkAction;
+
 	//~~~Player
 	ACPP_PlayerChar* PlayerCharacter;
 
@@ -55,6 +58,9 @@ protected:
 
 	UFUNCTION()
 	void StopJumping();
+
+	UFUNCTION()
+	void SwordAttack();
 
 	// ~~~ Vine Logic
 	UFUNCTION()
