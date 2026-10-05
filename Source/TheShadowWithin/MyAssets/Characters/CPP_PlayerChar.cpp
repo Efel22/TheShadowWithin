@@ -5,6 +5,7 @@ Movement Functions
 */
 
 #include "MyAssets/Characters/CPP_PlayerChar.h"
+#include "PaperZDCharacter.h"
 #include "PaperFlipbookComponent.h" // Required for sprite flipping
 #include "Camera/CameraComponent.h"
 #include "Engine/Engine.h" // Used to print strings
@@ -33,10 +34,15 @@ void ACPP_PlayerChar::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Initial Respawn point should be at player start
 	SetRespawnPoint(GetActorLocation());
 }
 
 void ACPP_PlayerChar::DoMove(float Forward) {
+
+	// No Lives? DO NOTHING
+	//if (amountOfLives < 1) return;
+
 	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
 	AddMovementInput(MoveDir, Forward);
 
@@ -86,6 +92,20 @@ void ACPP_PlayerChar::DoClimbVine(float Forward) {
 
 void ACPP_PlayerChar::DoJump() {
 	Jump();
+
+	UCharacterMovementComponent* CMC = GetCharacterMovement();
+	if (!CMC || !CMC->IsFalling()) return;
+
+	// Play Sound
+	if (Sound_Jump)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_Jump,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
 }
 
 void ACPP_PlayerChar::DoStopJump() {
@@ -110,6 +130,7 @@ void ACPP_PlayerChar::Die()
 void ACPP_PlayerChar::StartClimbingVine()
 {
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
+	if (!CMC) return;
 	CMC->SetMovementMode(MOVE_Flying);
 	CMC->Velocity = FVector::ZeroVector;
 }
@@ -171,4 +192,125 @@ void ACPP_PlayerChar::FaceVine()
 	{
 		Teleport->SetFacingDirection(FixedScale.X);   // + = right, - = left
 	}
+}
+
+// *******************************************************************************
+//                                 HURT
+// *******************************************************************************
+void ACPP_PlayerChar::Hurt()
+{
+
+	// Basically, prevents hurt spam
+	if (bIsBeingHurt || amountOfLives < 1) return;
+
+	// Decrease amount of lives
+	amountOfLives = FMath::Max(0, amountOfLives - 1);
+
+	// ***************************
+	/*           HURT           */ 
+	// ***************************
+	if (amountOfLives > 0)
+	{
+		// Play Sound
+		if (Sound_HasBeenHurt)
+		{
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+				Sound_HasBeenHurt,
+				GetActorLocation(),
+				1.f,  // Volume
+				FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+			);
+		}
+
+		// Used by the PaperZD Anim BP to determine whether or not to play the HURT animation
+		bIsBeingHurt = true;
+
+		// Start the timer
+		GetWorld()->GetTimerManager().SetTimer(
+			HurtTimer,
+			this,
+			&ACPP_PlayerChar::EndHurt,
+			damageInmunityInterval,
+			false
+		);
+
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Hurt Player!"));
+	}
+	// ***************************
+	/*           DEATH          */
+	// ***************************
+	else {
+
+		// Insert Death Logic here?
+
+		// Play Sound
+		if (Sound_HasBeenDefeated)
+		{
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+				Sound_HasBeenDefeated,
+				GetActorLocation(),
+				1.f,  // Volume
+				FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+			);
+		}
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Death Player!"));
+
+	}
+}
+
+// *******************************************************************************
+//                                 END HURT
+// *******************************************************************************
+void ACPP_PlayerChar::EndHurt()
+{
+	// Used by the PaperZD Anim BP to determine whether or not to play the HURT animation
+	bIsBeingHurt = false;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("* * * RESET HURT!"));
+}
+
+// *******************************************************************************
+//                                 HEAL
+// *******************************************************************************
+void ACPP_PlayerChar::Heal()
+{
+
+	// Basically, prevents heal spam
+	if (bIsBeingHealed) return;
+
+	// Increate amount of lives
+	amountOfLives = FMath::Max(maxAmountOfLives, amountOfLives + 1 );
+
+	// Used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
+	bIsBeingHealed = true;
+
+	// Play Sound
+	if (Sound_HasBeenHealed)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_HasBeenHealed,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+
+	// Start the timer
+	GetWorld()->GetTimerManager().SetTimer(
+		HealTimer,
+		this,
+		&ACPP_PlayerChar::EndHeal,
+		healInmunityInterval,
+		false
+	);
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("Healed Player!"));
+}
+
+// *******************************************************************************
+//                                 END HEAL
+// *******************************************************************************
+void ACPP_PlayerChar::EndHeal()
+{
+	// Used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
+	bIsBeingHealed = false;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("* * * RESET HEALED!"));
 }

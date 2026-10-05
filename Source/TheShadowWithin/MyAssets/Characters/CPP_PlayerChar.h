@@ -9,15 +9,19 @@ Movement Functions
 
 #include "CoreMinimal.h"
 #include "PaperCharacter.h"
+#include "PaperZDCharacter.h"
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
+class USoundBase; // Used to declare sound properties
+
+
 /**
  *
  */
 UCLASS()
-class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperCharacter
+class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperZDCharacter
 {
 	GENERATED_BODY()
 
@@ -52,6 +56,33 @@ protected:
 	//       than having an FVector. Why'd do this now and not in EndlessVoid.h? cuz i found out about this NOW :/ 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Other")
 	UArrowComponent* CenterOfPlayerComponent;
+
+
+	// ***************************************************************************************************************
+	//                                                  SOUNDS
+	// ***************************************************************************************************************
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Jump;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasBeenHurt;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasBeenHealed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasRespawned;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasBeenDefeated;
+
+	// ***************************************************************************************************************
+	//                                                  PARTICLES
+	// ***************************************************************************************************************
+
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	//UNiagaraSystem;
 
 public:
 	//~~~Functions
@@ -92,7 +123,51 @@ public:
 	void DoStopJump();
 	//--------------------------------------------------------------------------------------------------------------
 
-	//~~~HEALTH FUNCTIONS
+	//~~~HEALTH FUNCTIONS & LOGIC
+
+	// Maximu amount of lives
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	int maxAmountOfLives = 3;
+
+	// Starts with this amount of lives
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	int amountOfLives = 3;
+
+	// How long until the player can take damage again?
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health| Inmunity")
+	float damageInmunityInterval = 0.25f;
+
+	// How long until the player can take heal again?
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health| Inmunity")
+	float healInmunityInterval = 0.25f;
+
+	// HURT LOGIC 
+	// Hurt         -> Calls EndHurt() using HurtTimer, 
+	// EndHurt()    -> Restores damage vulnerability, 
+	// bIsBeingHurt -> True when Hurt() is called, False when EndHurt() is called, 
+	//	               also used by the PaperZD Anim BP to determine whether or not to play the HURT animation
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void Hurt();
+	void EndHurt();
+	FTimerHandle HurtTimer;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsBeingHurt = false;
+	// ***********************************************************************************************************
+
+	// HEAL LOGIC 
+	// Heal           -> Calls EndHeal() using HealTimer, 
+	// EndHeal()      -> Restores healing vulnerability, 
+	// bIsBeingHealed -> True when Heal() is called, False when EndHeal() is called
+	//	                 also used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void Heal();
+	void EndHeal();
+	FTimerHandle HealTimer;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsBeingHealed = false;
+	// ***********************************************************************************************************
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void Die();
