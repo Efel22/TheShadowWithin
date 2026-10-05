@@ -10,6 +10,7 @@ Movement Functions
 #include "Engine/Engine.h" // Used to print strings
 #include "MyAssets/Characters/CPP_PlayerController.h" // Required for Vine Player Sprite Facing (In DoMove() )
 #include "Kismet/GameplayStatics.h"                   // ^
+#include "Components/ArrowComponent.h" // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
 #include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
 #include "MyAssets/Characters/ACPP_Enemy_Basic.h"
@@ -21,6 +22,10 @@ ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera->SetProjectionMode(ECameraProjectionMode::Orthographic);
 	Camera->SetAutoCalculateOrthoPlanes(false);
 	Camera->SetOrthoWidth(orthoWidth);
+
+	// Center of Vine Component
+	CenterOfPlayerComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("Center of Player"));
+	CenterOfPlayerComponent->SetupAttachment(RootComponent);
 }
 
 
@@ -72,6 +77,9 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 			Teleport->SetFacingDirection(Forward);
 		}
 	}
+
+	// Make the player face the vine regardless 
+	if (PC && PC->GetIsHoldingVine()) FaceVine();;
 }
 
 void ACPP_PlayerChar::DoClimbVine(float Forward) {
@@ -147,7 +155,7 @@ void ACPP_PlayerChar::FaceVine()
 {
 	FVector FixedScale = GetSprite()->GetRelativeScale3D();
 
-	float PlayerX = GetActorLocation().X;
+	float PlayerX = CenterOfPlayerComponent->GetComponentLocation().X;
 
 	if (currentVine_PosX > PlayerX)
 	{

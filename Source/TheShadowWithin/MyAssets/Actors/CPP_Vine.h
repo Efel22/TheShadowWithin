@@ -7,6 +7,7 @@
 #include "Components/BoxComponent.h"
 #include "CPP_Vine.generated.h"
 
+class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 class UPaperSpriteComponent; // Required for sprite handling
 class USoundBase; // Required for sound base
 class UNiagaraSystem; // Required for playing niagara systems
@@ -30,6 +31,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine");
 	UBoxComponent* DetectionBox;
+
+	// Used to determine where the "center" of the vine is (used in player's sprite flipping)
+	// WHY?: A component is really easy to move around and you an use getComponentLocation(), which is, in my opinion, better
+	//       than having an FVector. Why'd do this now and not in EndlessVoid.h? cuz i found out about this NOW :/ 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Vine|Other")
+	UArrowComponent* CenterOfVineComponent;
 
 	// Sound that plays when vine is grabbed
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine|Audio")

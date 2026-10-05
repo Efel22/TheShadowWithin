@@ -14,6 +14,7 @@ Movement Functions
 class UCameraComponent;
 class ACPP_Enemy_Basic;
 
+class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 /**
  *
  */
@@ -49,6 +50,13 @@ protected:
 	//~~~Jump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
 	float jumpCutOff = 0.f;
+
+
+	// Used to determine where the "center" of the vine is (used in player's sprite flipping)
+	// WHY?: A component is really easy to move around and you an use getComponentLocation(), which is, in my opinion, better
+	//       than having an FVector. Why'd do this now and not in EndlessVoid.h? cuz i found out about this NOW :/ 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Other")
+	UArrowComponent* CenterOfPlayerComponent;
 
 public:
 	//~~~Functions
