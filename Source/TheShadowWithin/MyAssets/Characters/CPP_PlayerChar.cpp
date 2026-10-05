@@ -211,3 +211,71 @@ void ACPP_PlayerChar::DoSwordAttack() {
 	}
 
 }
+
+void ACPP_PlayerChar::DoSwordParry() {
+	FHitResult hit;
+
+	FVector start = GetActorLocation();
+	FVector end = GetActorLocation();
+	FQuat rot = FQuat(0, 0, 0, 0);
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 100.f));
+	FCollisionQueryParams traceParams;
+	traceParams.AddIgnoredActor(this);
+
+	FCollisionObjectQueryParams objectType;
+	//~~~Adds a specific object type to search, In this case it will be the pawn object type
+	objectType.AddObjectTypesToQuery(ECC_Pawn);
+
+	//Checks the orientation of the sprite to determine the correct direction the attack should face
+	if (GetSprite()->GetRelativeScale3D().X > 0) {
+		end.X = GetActorLocation().X + swordDefenseBoxSize;
+		parryKnockback = FMath::Pow(parryKnockback, 2);
+	}
+	else {
+		end.X = GetActorLocation().X + (-swordDefenseBoxSize);
+		parryKnockback = -(FMath::Pow(parryKnockback, 2));
+	}
+
+	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
+
+		AACPP_Enemy_Basic* enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
+		if (enemy) {
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
+			enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
+		}
+	}
+}
+
+void ACPP_PlayerChar::DoSwordDefense() {
+	FHitResult hit;
+
+	FVector start = GetActorLocation();
+	FVector end = GetActorLocation();
+	FQuat rot = FQuat(0, 0, 0, 0);
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 100.f));
+	FCollisionQueryParams traceParams;
+	traceParams.AddIgnoredActor(this);
+
+	FCollisionObjectQueryParams objectType;
+	//~~~Adds a specific object type to search, In this case it will be the pawn object type
+	objectType.AddObjectTypesToQuery(ECC_Pawn);
+
+	//Checks the orientation of the sprite to determine the correct direction the attack should face
+	if (GetSprite()->GetRelativeScale3D().X > 0) {
+		end.X = GetActorLocation().X + swordDefenseBoxSize;
+		
+	}
+	else {
+		end.X = GetActorLocation().X + (-swordDefenseBoxSize);
+		
+	}
+
+	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
+
+		AACPP_Enemy_Basic* enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
+		if (enemy) {
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack Defended");
+			enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
+		}
+	}
+}

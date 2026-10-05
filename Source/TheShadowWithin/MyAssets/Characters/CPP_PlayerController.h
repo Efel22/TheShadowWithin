@@ -40,6 +40,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input|Movement")
 	UInputAction* SwordAtkAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input|Movement")
+	UInputAction* SwordDefAction;
+
 	//~~~Player
 	ACPP_PlayerChar* PlayerCharacter;
 
@@ -61,6 +64,12 @@ protected:
 
 	UFUNCTION()
 	void SwordAttack();
+
+	UFUNCTION()
+	void SwordParry();
+
+	UFUNCTION()
+	void SwordDefense();
 
 	// ~~~ Vine Logic
 	UFUNCTION()

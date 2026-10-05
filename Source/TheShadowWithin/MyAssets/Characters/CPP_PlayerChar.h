@@ -47,6 +47,13 @@ protected:
 	//	Sword atributes
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Attack")
 	float swordHitBoxSize = 300;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
+	float swordDefenseBoxSize = 150;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
+	float parryKnockback = 1000;
+
 	//~~~Jump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
 	float jumpCutOff = 0.f;
@@ -98,6 +105,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoSwordAttack();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoSwordParry();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoSwordDefense();
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~HEALTH FUNCTIONS
