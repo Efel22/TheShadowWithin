@@ -15,7 +15,15 @@ Movement Functions
 class UCameraComponent;
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 class USoundBase; // Used to declare sound properties
+class UUserWidget; // Required for widgets
 
+
+// ONLIVESCHANGED EVENT DISPATCHER
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam( // ONE PARAM:
+	FOnLivesChanged, // Name of the Event
+	int,             // Type of Variable
+	CurrentLives     // Name of Variable
+);
 
 /**
  *
@@ -168,19 +176,31 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsBeingHealed = false;
 	// ***********************************************************************************************************
+	// EVENT DISPATCHER
+	UPROPERTY(BlueprintAssignable, Category = "Health")
+	FOnLivesChanged OnLivesChanged;
 
-	UFUNCTION(BlueprintCallable, Category = "Health")
+	// ***********************************************************************************************************
+
+	UFUNCTION(BlueprintCallable, Category = "Health|Death")
 	void Die();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Death")
 	bool isDead = false;
 
-	UFUNCTION(BlueprintCallable, Category = "Health")
+	UFUNCTION(BlueprintCallable, Category = "Health|Death")
 	bool IsDead() { return isDead; }
+
+	// Widget used to display after dying
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Death")
+	TSubclassOf<UUserWidget> DeathWidgetClass;
 
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~RESPAWN LOGIC
+
+	UFUNCTION(BlueprintCallable, Category="Respawn")
+	void Respawn();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Respawn|Location")
 	FVector RespawnLocation = FVector::ZeroVector;
