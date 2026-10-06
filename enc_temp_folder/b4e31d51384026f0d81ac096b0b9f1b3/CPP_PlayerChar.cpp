@@ -310,7 +310,6 @@ void ACPP_PlayerChar::DoSwordAttack() {
 	HitBoxTrace(swordHitBoxSize);
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy hit");
-		enemy->Defeat();
 	}
 
 }

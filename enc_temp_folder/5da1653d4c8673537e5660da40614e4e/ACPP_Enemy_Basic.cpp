@@ -6,8 +6,6 @@
 #include "MyAssets/Characters/CPP_PlayerChar.h" // Required for player char. casting
 #include "GameFramework/CharacterMovementComponent.h" // Required for changing the character's movement speed (FOR NOW)
 #include "Components/SphereComponent.h"
-#include "PaperFlipbookComponent.h"
-#include "Components/CapsuleComponent.h"
 
 // *******************************************************************************
 //                             CONSTRUCTOR
@@ -56,42 +54,39 @@ void AACPP_Enemy_Basic::Tick(float DeltaTime)
 	// Safety Check
 	if (!PlayerCharRef) return;
 
-	//If the enemy has been defeated by the player make it dissapear and stop following the player
-	if (!bHasBeenDefeated) {
 
-		// How far is it from the player?
-		float distance = FVector::Dist(PlayerCharRef->GetActorLocation(), GetActorLocation());
+	// How far is it from the player?
+	float distance = FVector::Dist(PlayerCharRef->GetActorLocation(), GetActorLocation());
 
-		// Is it within range?
-		if (distance <= FDetectionRange)
+	// Is it within range?
+	if (distance <= FDetectionRange)
+	{
+		// Where should this enemy face?
+		// Based on the two characters positions (player and this enemy's) get its sign as it determines the location
+		// NOTE: This is based on the asumption that 'X' axis represents "right" and "left"!!!!
+		int direction = FMath::Sign(
+			PlayerCharRef->GetActorLocation().X - GetActorLocation().X
+		);
+
+		// Prevents enemy from disappearing visually
+		if (direction != 0)
 		{
-			// Where should this enemy face?
-			// Based on the two characters positions (player and this enemy's) get its sign as it determines the location
-			// NOTE: This is based on the asumption that 'X' axis represents "right" and "left"!!!!
-			int direction = FMath::Sign(
-				PlayerCharRef->GetActorLocation().X - GetActorLocation().X
-			);
-
-			// Prevents enemy from disappearing visually
-			if (direction != 0)
-			{
-				// Sets the scale based on the direction
-				SetActorScale3D(FVector(originalScale.X * direction, originalScale.Y, originalScale.Z));
-			}
-
-
-			// Moves the enemy in the 'x' axis in the direction that faces the player
-			AddMovementInput(FVector(1.f, 0.f, 0.f), direction);
-
-			/*int verticalDirection = FMath::Sign(
-				PlayerCharRef->GetActorLocation().Z - GetActorLocation().Z
-			);
-
-			if (verticalDirection > 0) {
-				Jump();
-			}*/
-
+			// Sets the scale based on the direction
+			SetActorScale3D(FVector(originalScale.X * direction, originalScale.Y, originalScale.Z));
 		}
+		
+
+		// Moves the enemy in the 'x' axis in the direction that faces the player
+		AddMovementInput(FVector(1.f, 0.f, 0.f), direction);
+
+		/*int verticalDirection = FMath::Sign(
+			PlayerCharRef->GetActorLocation().Z - GetActorLocation().Z
+		);
+
+		if (verticalDirection > 0) {
+			Jump();
+		}*/
+
 	}
 
 }
@@ -155,7 +150,7 @@ void AACPP_Enemy_Basic::AttackPlayer() {
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attacking Player");
 			player->LaunchCharacter(FVector(knockbackDirection, 0, 0), true, false);
 			bEnemyIsAttacking = false;
-			player->Hurt();
+			
 		}
 		else {
 			return;
@@ -163,10 +158,4 @@ void AACPP_Enemy_Basic::AttackPlayer() {
 
 		GetWorldTimerManager().SetTimer(AttackCooldownTimer, this, &AACPP_Enemy_Basic::AttackPlayer, attackCooldownTime, false);
 	}
-}
-
-void AACPP_Enemy_Basic::Defeat() {
-	GetSprite()->SetVisibility(false);
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	bHasBeenDefeated = true;
 }

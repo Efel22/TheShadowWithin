@@ -13,7 +13,7 @@ Movement Functions
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
-class ACPP_Enemy_Basic;
+class AACPP_Enemy_Basic;
 
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 class USoundBase; // Used to declare sound properties
@@ -66,9 +66,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
 	float parryKnockback = 600;
 
-	//AACPP_Enemy_Basic* enemy;
+	UPROPERTY()
+	AACPP_Enemy_Basic* enemy;
 
-	//void HitBoxTrace(float hitBoxSize);
+	void HitBoxTrace(float hitBoxSize);
 
 	//~~~Jump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
