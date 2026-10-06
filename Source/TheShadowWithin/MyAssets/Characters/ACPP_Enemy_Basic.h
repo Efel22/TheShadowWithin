@@ -10,6 +10,7 @@
 
 //class UBoxComponent;
 class ACPP_PlayerChar;
+class USphereComponent;
 
 UCLASS()
 class THESHADOWWITHIN_API AACPP_Enemy_Basic : public APaperCharacter
@@ -25,8 +26,8 @@ protected:
 	virtual void BeginPlay() override;
 
 	//Attack Collider
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	//UBoxComponent* AttackCollider;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	USphereComponent* AttackCollider;
 
 
 	// Player Char. reference

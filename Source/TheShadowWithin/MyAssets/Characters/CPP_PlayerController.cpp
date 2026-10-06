@@ -46,7 +46,7 @@ void ACPP_PlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(ClimbVineAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::ClimbVine);
 		EnhancedInputComponent->BindAction(ClimbVineAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopMove_Vertical);
 		EnhancedInputComponent->BindAction(SwordAtkAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordAttack);
-		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Started, this, &ACPP_PlayerController::SwordParry);
+		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Ongoing, this, &ACPP_PlayerController::SwordParry);
 		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordDefense);
 		
 	}

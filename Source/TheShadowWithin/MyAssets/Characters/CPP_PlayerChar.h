@@ -52,7 +52,11 @@ protected:
 	float swordDefenseBoxSize = 150;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
-	float parryKnockback = 1000;
+	float parryKnockback = 600;
+
+	AACPP_Enemy_Basic enemy;
+
+	//bool HitBoxTrace(float hitBoxSize);
 
 	//~~~Jump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")

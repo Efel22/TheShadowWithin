@@ -226,14 +226,16 @@ void ACPP_PlayerChar::DoSwordParry() {
 	//~~~Adds a specific object type to search, In this case it will be the pawn object type
 	objectType.AddObjectTypesToQuery(ECC_Pawn);
 
+	float parryKnockbackDirection;
+
 	//Checks the orientation of the sprite to determine the correct direction the attack should face
 	if (GetSprite()->GetRelativeScale3D().X > 0) {
 		end.X = GetActorLocation().X + swordDefenseBoxSize;
-		parryKnockback = FMath::Pow(parryKnockback, 2);
+		parryKnockbackDirection = parryKnockback;
 	}
 	else {
 		end.X = GetActorLocation().X + (-swordDefenseBoxSize);
-		parryKnockback = -(FMath::Pow(parryKnockback, 2));
+		parryKnockbackDirection = -(parryKnockback);
 	}
 
 	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
@@ -241,7 +243,10 @@ void ACPP_PlayerChar::DoSwordParry() {
 		AACPP_Enemy_Basic* enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
 		if (enemy) {
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
-			enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
+			enemy->LaunchCharacter(FVector(parryKnockbackDirection, 0, 0), true, false);
+		}
+		else {
+			return;
 		}
 	}
 }
@@ -275,7 +280,11 @@ void ACPP_PlayerChar::DoSwordDefense() {
 		AACPP_Enemy_Basic* enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
 		if (enemy) {
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack Defended");
-			enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
+			//enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
+		}
+		else {
+			return;
 		}
 	}
 }
+
