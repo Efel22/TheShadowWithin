@@ -5,8 +5,10 @@ Movement Functions
 */
 
 #include "MyAssets/Characters/CPP_PlayerChar.h"
+#include "PaperZDCharacter.h"
 #include "PaperFlipbookComponent.h" // Required for sprite flipping
 #include "Camera/CameraComponent.h"
+#include "Blueprint/UserWidget.h" // Required to show specified widget from header file
 #include "Engine/Engine.h" // Used to print strings
 #include "MyAssets/Characters/CPP_PlayerController.h" // Required for Vine Player Sprite Facing (In DoMove() )
 #include "Kismet/GameplayStatics.h"                   // ^
@@ -34,12 +36,17 @@ void ACPP_PlayerChar::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Initial Respawn point should be at player start
 	SetRespawnPoint(GetActorLocation());
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //~~~Basic Movement
 void ACPP_PlayerChar::DoMove(float Forward) {
+
+	// DEAD? DO NOTHING
+	if (IsDead()) return;
+
 	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
 	AddMovementInput(MoveDir, Forward);
 
@@ -88,7 +95,24 @@ void ACPP_PlayerChar::DoClimbVine(float Forward) {
 }
 
 void ACPP_PlayerChar::DoJump() {
+	// DEAD? DO NOTHING
+	if (IsDead()) return;
+
 	Jump();
+
+	UCharacterMovementComponent* CMC = GetCharacterMovement();
+	if (!CMC || CMC->IsFalling()) return;
+
+	// Play Sound
+	if (Sound_Jump)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_Jump,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
 }
 
 void ACPP_PlayerChar::DoStopJump() {
@@ -100,12 +124,112 @@ void ACPP_PlayerChar::DoStopJump() {
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // *******************************************************************************
-//                             REMOVE DARKNESS
+//                                      DIE
 // *******************************************************************************
 // ?: Executes death/defeat logic
 void ACPP_PlayerChar::Die()
 {
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("PLAYER HAS BEEN UNALIVED!!! :O"));
+
+	// Insert Death Logic here?
+
+	// Play Sound
+	if (Sound_HasBeenDefeated)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_HasBeenDefeated,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Death Player!"));
+
+	// Player is alive
+	isDead = true;
+
+	// Make sure a Win Widget was assigned in the Editor
+	if (!DeathWidgetClass) return;
+
+	// Create the assigned Win Widget
+	UUserWidget* DeathWidget = CreateWidget<UUserWidget>(
+		GetWorld(),
+		DeathWidgetClass
+	);
+
+	// Make sure the Widget was successfully created
+	if (!DeathWidget) return;
+
+	// Add the Death Widget to the player's screen
+	DeathWidget->AddToViewport();
+
+	// Get the player's controller
+	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(
+		UGameplayStatics::GetPlayerController(GetWorld(), 0)
+	);
+
+	if (PC)
+	{
+		// Make the mouse cursor visible
+		PC->bShowMouseCursor = true;
+
+		// Set the player's input to UI only
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(DeathWidget->TakeWidget());
+
+		PC->SetInputMode(InputMode);
+	}
+}
+
+// *******************************************************************************
+//                                      RESPAWN
+// *******************************************************************************
+// ?: Executes death/defeat logic
+void ACPP_PlayerChar::Respawn()
+{
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("PLAYER has respawned!!! :O"));
+
+	// Play Sound
+	if (Sound_HasRespawned)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_HasRespawned,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+
+	// Stop previous movement
+	if (UCharacterMovementComponent* CMC = GetCharacterMovement())
+	{
+		CMC->StopMovementImmediately();
+	}
+
+	// Move player to respawn point
+	SetActorLocation(GetRespawnPoint());
+
+	// Set the amount of lives to max
+	amountOfLives = maxAmountOfLives;
+
+	// Set it to false
+	isDead = false;
+
+	// Get the player's controller
+	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(
+		UGameplayStatics::GetPlayerController(GetWorld(), 0)
+	);
+
+	if (PC)
+	{
+		// Make the mouse cursor visible
+		PC->bShowMouseCursor = false;
+
+		// Set the player's input to UI only
+		FInputModeGameOnly InputMode;
+
+		PC->SetInputMode(InputMode);
+	}
 }
 
 // *******************************************************************************
@@ -114,6 +238,7 @@ void ACPP_PlayerChar::Die()
 void ACPP_PlayerChar::StartClimbingVine()
 {
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
+	if (!CMC) return;
 	CMC->SetMovementMode(MOVE_Flying);
 	CMC->Velocity = FVector::ZeroVector;
 }
@@ -288,3 +413,115 @@ void ACPP_PlayerChar::DoSwordDefense() {
 	}
 }
 
+// *******************************************************************************
+//                                 HURT
+// *******************************************************************************
+void ACPP_PlayerChar::Hurt()
+{
+
+	// Basically, prevents hurt spam
+	if (bIsBeingHurt || amountOfLives < 1) return;
+
+	// Decrease amount of lives
+	amountOfLives = FMath::Max(0, amountOfLives - 1);
+
+	// Call Event Dispatcher
+	OnLivesChanged.Broadcast(amountOfLives);
+
+	// ***************************
+	/*           HURT           */ 
+	// ***************************
+	if (amountOfLives > 0)
+	{
+		// Play Sound
+		if (Sound_HasBeenHurt)
+		{
+			UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+				Sound_HasBeenHurt,
+				GetActorLocation(),
+				1.f,  // Volume
+				FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+			);
+		}
+
+		// Used by the PaperZD Anim BP to determine whether or not to play the HURT animation
+		bIsBeingHurt = true;
+
+		// Start the timer
+		GetWorld()->GetTimerManager().SetTimer(
+			HurtTimer,
+			this,
+			&ACPP_PlayerChar::EndHurt,
+			damageInmunityInterval,
+			false
+		);
+
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Hurt Player!"));
+	}
+	// ***************************
+	/*           DEATH          */
+	// ***************************
+	else {
+		Die();
+	}
+}
+
+// *******************************************************************************
+//                                 END HURT
+// *******************************************************************************
+void ACPP_PlayerChar::EndHurt()
+{
+	// Used by the PaperZD Anim BP to determine whether or not to play the HURT animation
+	bIsBeingHurt = false;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("* * * RESET HURT!"));
+}
+
+// *******************************************************************************
+//                                 HEAL
+// *******************************************************************************
+void ACPP_PlayerChar::Heal()
+{
+
+	// Basically, prevents heal spam
+	if (bIsBeingHealed) return;
+
+	// Increate amount of lives
+	amountOfLives = FMath::Max(maxAmountOfLives, amountOfLives + 1 );
+
+	// Call Event Dispatcher
+	OnLivesChanged.Broadcast(amountOfLives);
+
+	// Used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
+	bIsBeingHealed = true;
+
+	// Play Sound
+	if (Sound_HasBeenHealed)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_HasBeenHealed,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+
+	// Start the timer
+	GetWorld()->GetTimerManager().SetTimer(
+		HealTimer,
+		this,
+		&ACPP_PlayerChar::EndHeal,
+		healInmunityInterval,
+		false
+	);
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("Healed Player!"));
+}
+
+// *******************************************************************************
+//                                 END HEAL
+// *******************************************************************************
+void ACPP_PlayerChar::EndHeal()
+{
+	// Used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
+	bIsBeingHealed = false;
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("* * * RESET HEALED!"));
+}

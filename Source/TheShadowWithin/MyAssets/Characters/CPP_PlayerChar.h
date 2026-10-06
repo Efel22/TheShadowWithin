@@ -9,17 +9,29 @@ Movement Functions
 
 #include "CoreMinimal.h"
 #include "PaperCharacter.h"
+#include "PaperZDCharacter.h"
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
 class ACPP_Enemy_Basic;
 
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
+class USoundBase; // Used to declare sound properties
+class UUserWidget; // Required for widgets
+
+
+// ONLIVESCHANGED EVENT DISPATCHER
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam( // ONE PARAM:
+	FOnLivesChanged, // Name of the Event
+	int,             // Type of Variable
+	CurrentLives     // Name of Variable
+);
+
 /**
  *
  */
 UCLASS()
-class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperCharacter
+class THESHADOWWITHIN_API ACPP_PlayerChar : public APaperZDCharacter
 {
 	GENERATED_BODY()
 
@@ -69,6 +81,33 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Other")
 	UArrowComponent* CenterOfPlayerComponent;
 
+
+	// ***************************************************************************************************************
+	//                                                  SOUNDS
+	// ***************************************************************************************************************
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Jump;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasBeenHurt;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasBeenHealed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasRespawned;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HasBeenDefeated;
+
+	// ***************************************************************************************************************
+	//                                                  PARTICLES
+	// ***************************************************************************************************************
+
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	//UNiagaraSystem;
+
 public:
 	//~~~Functions
 
@@ -117,20 +156,76 @@ public:
 	void DoSwordDefense();
 	//--------------------------------------------------------------------------------------------------------------
 
-	//~~~HEALTH FUNCTIONS
+	//~~~HEALTH FUNCTIONS & LOGIC
 
+	// Maximu amount of lives
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	int maxAmountOfLives = 3;
+
+	// Starts with this amount of lives
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	int amountOfLives = 3;
+
+	// How long until the player can take damage again?
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health| Inmunity")
+	float damageInmunityInterval = 0.25f;
+
+	// How long until the player can take heal again?
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health| Inmunity")
+	float healInmunityInterval = 0.25f;
+
+	// HURT LOGIC 
+	// Hurt         -> Calls EndHurt() using HurtTimer, 
+	// EndHurt()    -> Restores damage vulnerability, 
+	// bIsBeingHurt -> True when Hurt() is called, False when EndHurt() is called, 
+	//	               also used by the PaperZD Anim BP to determine whether or not to play the HURT animation
 	UFUNCTION(BlueprintCallable, Category = "Health")
+	void Hurt();
+	void EndHurt();
+	FTimerHandle HurtTimer;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsBeingHurt = false;
+	// ***********************************************************************************************************
+
+	// HEAL LOGIC 
+	// Heal           -> Calls EndHeal() using HealTimer, 
+	// EndHeal()      -> Restores healing vulnerability, 
+	// bIsBeingHealed -> True when Heal() is called, False when EndHeal() is called
+	//	                 also used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
+	UFUNCTION(BlueprintCallable, Category = "Health")
+	void Heal();
+	void EndHeal();
+	FTimerHandle HealTimer;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsBeingHealed = false;
+	// ***********************************************************************************************************
+	// EVENT DISPATCHER
+	UPROPERTY(BlueprintAssignable, Category = "Health")
+	FOnLivesChanged OnLivesChanged;
+
+	// ***********************************************************************************************************
+
+	UFUNCTION(BlueprintCallable, Category = "Health|Death")
 	void Die();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Death")
 	bool isDead = false;
 
-	UFUNCTION(BlueprintCallable, Category = "Health")
+	UFUNCTION(BlueprintCallable, Category = "Health|Death")
 	bool IsDead() { return isDead; }
+
+	// Widget used to display after dying
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health|Death")
+	TSubclassOf<UUserWidget> DeathWidgetClass;
 
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~RESPAWN LOGIC
+
+	UFUNCTION(BlueprintCallable, Category="Respawn")
+	void Respawn();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Respawn|Location")
 	FVector RespawnLocation = FVector::ZeroVector;

@@ -19,7 +19,9 @@ public class TheShadowWithin : ModuleRules
 			"GameplayStateTreeModule",
             "Niagara",
             "UMG",
-			"Slate"
+			"Slate",
+			"Paper2D",
+			"PaperZD"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

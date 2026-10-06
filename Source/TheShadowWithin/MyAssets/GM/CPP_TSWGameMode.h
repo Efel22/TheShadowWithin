@@ -34,11 +34,21 @@ protected:
 	float Darkness = 0.0f;
 
 	// How much darkess gets added each interval
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Darkness", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Darkness", meta = (
+		ClampMin = "0.0",
+		ClampMax = "1.0",
+		EditCondition = "DoesDarknessIncrements == true"
+		)
+	)
 	float DarknessIncrements = 0.01f;
 
 	// Time between each darkness increment interval
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Darkness", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Darkness", meta = (
+		ClampMin = "0.0", 
+		ClampMax = "1.0",
+		EditCondition = "DoesDarknessIncrements == true"
+		)
+	)
 	float SecondsBetweenIncrements = 1.f;
 
 	// Does the darkness increment? (Can be used for debugging)
