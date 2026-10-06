@@ -29,6 +29,32 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	USphereComponent* AttackCollider;
 
+	UFUNCTION()
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
+	float attackHitBox = 300.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
+	float knockback = 600.f;
+
+	bool bEnemyIsAttacking = false;
+	//Attack Timer
+	FTimerHandle AttackTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Attack")
+	float attackTime = .5f;
+
+	void AttackPlayer();
+
+	FTimerHandle AttackCooldownTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Attack")
+	float attackCooldownTime = 1.f;
+
+	//void AttackCooldown();
+
+	
 
 	// Player Char. reference
 	UPROPERTY()
@@ -60,5 +86,10 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	//Setters and Getters
+	void SetEnemyisAttacking(bool EA);
+
+	bool GetEnemyIsAttacking();
 
 };

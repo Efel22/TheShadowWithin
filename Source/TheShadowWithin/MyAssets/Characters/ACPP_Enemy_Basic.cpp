@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h" // Required for getting the player character
 #include "MyAssets/Characters/CPP_PlayerChar.h" // Required for player char. casting
 #include "GameFramework/CharacterMovementComponent.h" // Required for changing the character's movement speed (FOR NOW)
+#include "Components/SphereComponent.h"
 
 // *******************************************************************************
 //                             CONSTRUCTOR
@@ -12,6 +13,10 @@
 // ?: Looks pretty :D
 AACPP_Enemy_Basic::AACPP_Enemy_Basic()
 {
+	AttackCollider = CreateDefaultSubobject<USphereComponent>(TEXT("Attack Collider"));
+	AttackCollider->SetupAttachment(RootComponent);
+	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &AACPP_Enemy_Basic::OnBeginOverlap);
+
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -104,3 +109,53 @@ void AACPP_Enemy_Basic::EnemyJump() {
 	}
 }
 
+void AACPP_Enemy_Basic::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
+	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
+	if (player) {
+		GetWorldTimerManager().SetTimer(AttackTimer, this, &AACPP_Enemy_Basic::AttackPlayer, attackTime, false);
+		bEnemyIsAttacking = true;
+	}
+}
+
+void AACPP_Enemy_Basic::AttackPlayer() {
+	FHitResult hit;
+
+	FVector start = GetActorLocation();
+	FVector end = GetActorLocation();
+	FQuat rot = FQuat(0, 0, 0, 0);
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 100.f));
+	FCollisionQueryParams traceParams;
+	traceParams.AddIgnoredActor(this);
+
+	FCollisionObjectQueryParams objectType;
+	//~~~Adds a specific object type to search, In this case it will be the pawn object type
+	objectType.AddObjectTypesToQuery(ECC_Pawn);
+
+	float knockbackDirection;
+
+	//Checks the orientation of the sprite to determine the correct direction the attack should face
+	if (GetActorRelativeScale3D().X > 0) {
+		end.X = GetActorLocation().X + attackHitBox;
+		knockbackDirection = knockback;
+	}
+	else {
+		end.X = GetActorLocation().X + (-attackHitBox);
+		knockbackDirection = -(knockback);
+	}
+
+	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
+
+		ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(hit.GetActor());
+		if (player) {
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attacking Player");
+			player->LaunchCharacter(FVector(knockbackDirection, 0, 0), true, false);
+			bEnemyIsAttacking = false;
+			
+		}
+		else {
+			return;
+		}
+
+		GetWorldTimerManager().SetTimer(AttackCooldownTimer, this, &AACPP_Enemy_Basic::AttackPlayer, attackCooldownTime, false);
+	}
+}
