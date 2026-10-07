@@ -316,6 +316,9 @@ void ACPP_PlayerChar::DoSwordAttack() {
 }
 
 void ACPP_PlayerChar::DoSwordParry() {
+	//prevents the player from getting damage
+	bIsDefending = true;
+
 	
 	HitBoxTrace(swordDefenseBoxSize);
 	float parryKnockbackDirection;
@@ -338,11 +341,18 @@ void ACPP_PlayerChar::DoSwordParry() {
 }
 
 void ACPP_PlayerChar::DoSwordDefense() {
+	//prevents the player from getting damage
+	bIsDefending = true;
+
 	HitBoxTrace(swordDefenseBoxSize);
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack Defended");
 		//enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
 	}
+}
+
+void ACPP_PlayerChar::DoStopSwordDefense() {
+	bIsDefending = false;
 }
 
 void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
@@ -487,4 +497,10 @@ void ACPP_PlayerChar::EndHeal()
 	// Used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
 	bIsBeingHealed = false;
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("* * * RESET HEALED!"));
+}
+
+
+//Setters and Getters
+bool ACPP_PlayerChar::GetIsPlayerDefending() {
+	return bIsDefending;
 }

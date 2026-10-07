@@ -155,7 +155,9 @@ void AACPP_Enemy_Basic::AttackPlayer() {
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attacking Player");
 			player->LaunchCharacter(FVector(knockbackDirection, 0, 0), true, false);
 			bEnemyIsAttacking = false;
-			player->Hurt();
+			if (!player->GetIsPlayerDefending()) {
+				player->Hurt();
+			}
 		}
 		else {
 			return;

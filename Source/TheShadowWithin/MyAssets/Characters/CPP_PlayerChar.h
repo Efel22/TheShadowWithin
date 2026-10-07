@@ -66,6 +66,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
 	float parryKnockback = 600;
 
+	bool bIsDefending = false;
+
 	UPROPERTY()
 	AACPP_Enemy_Basic* enemy;
 
@@ -155,6 +157,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoSwordDefense();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoStopSwordDefense();
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~HEALTH FUNCTIONS & LOGIC
@@ -237,5 +242,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Respawn")
 	FVector GetRespawnPoint() { return RespawnLocation; }
 
+
+	//Setters and getters
+	bool GetIsPlayerDefending();
 
 };

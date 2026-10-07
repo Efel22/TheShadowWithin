@@ -48,6 +48,7 @@ void ACPP_PlayerController::SetupInputComponent()
 		EnhancedInputComponent->BindAction(SwordAtkAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordAttack);
 		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Ongoing, this, &ACPP_PlayerController::SwordParry);
 		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordDefense);
+		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopSwordDefense);
 		
 	}
 }
@@ -133,6 +134,10 @@ void ACPP_PlayerController::SwordParry() {
 
 void ACPP_PlayerController::SwordDefense() {
 	PlayerCharacter->DoSwordDefense();
+}
+
+void ACPP_PlayerController::StopSwordDefense() {
+	PlayerCharacter->DoStopSwordDefense();
 }
 
 void ACPP_PlayerController::SetIsHoldingVine(bool _value, float vine_pos_x) {

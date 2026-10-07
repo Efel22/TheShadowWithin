@@ -71,6 +71,9 @@ protected:
 	UFUNCTION()
 	void SwordDefense();
 
+	UFUNCTION()
+	void StopSwordDefense();
+
 	// ~~~ Vine Logic
 	UFUNCTION()
 	void ClimbVine(const FInputActionValue& Value);
