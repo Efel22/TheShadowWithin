@@ -13,6 +13,8 @@ Movement Functions
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
+class AACPP_Enemy_Basic;
+
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 class USoundBase; // Used to declare sound properties
 class UUserWidget; // Required for widgets
@@ -54,7 +56,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|CameraMovements")
 	float orthoWidth = 7000;
 
-	//Jump
+	//	Sword atributes
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Attack")
+	float swordHitBoxSize = 300;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
+	float swordDefenseBoxSize = 150;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
+	float parryKnockback = 600;
+
+	bool bIsDefending = false;
+
+	UPROPERTY()
+	AACPP_Enemy_Basic* enemy;
+
+	void HitBoxTrace(float hitBoxSize);
+
+	//~~~Jump
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
 	float jumpCutOff = 0.f;
 
@@ -129,6 +148,18 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoStopJump();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoSwordAttack();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoSwordParry();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoSwordDefense();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void DoStopSwordDefense();
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~HEALTH FUNCTIONS & LOGIC
@@ -211,5 +242,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Respawn")
 	FVector GetRespawnPoint() { return RespawnLocation; }
 
+
+	//Setters and getters
+	bool GetIsPlayerDefending();
 
 };
