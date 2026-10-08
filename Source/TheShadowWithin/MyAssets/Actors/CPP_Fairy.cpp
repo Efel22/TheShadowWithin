@@ -221,6 +221,7 @@ void ACPP_Fairy::FlipFairy(float DirectionX)
 // *******************************************************************************
 //                           FIND NEAREST CONSUMABLE
 // *******************************************************************************
+// ?: Finds the nearest consumable within the specified SearchRadius
 void ACPP_Fairy::FindNearestConsumable()
 {
 	// Safety check
@@ -239,37 +240,44 @@ void ACPP_Fairy::FindNearestConsumable()
 	// Reset the nearest consumable
 	NearestConsumable = nullptr;
 
+	// Store the maximum allowed distance (squared)
+	float MaxDistanceSquared = FMath::Square(SearchRadius);
+
 	// Stores the shortest distance found
-	float NearestDistance = TNumericLimits<float>::Max();
+	float NearestDistance = MaxDistanceSquared;
+
+	// Get the player's current position
+	FVector PlayerLocation = Player->GetActorLocation();
+
+	// Ignore the Y axis
+	PlayerLocation.Y = 0.f;
 
 	// Check every consumable
 	for (AActor* ConsumableActor : Consumables)
 	{
 		// Cast actor to consumable
-		ACPP_Consumable* Consumable = Cast<ACPP_Consumable>(
-			ConsumableActor
-		);
+		ACPP_Consumable* Consumable = Cast<ACPP_Consumable>(ConsumableActor);
 
 		// Safety check
 		if (!Consumable) continue;
 
-		// Get the distance between the PLAYER and the consumable
-		// ?: The nearest consumable should be based on the player's position,
-		//    NOT the fairy's position
-		FVector PlayerLocation = Player->GetActorLocation();
+		// Get the consumable's position
 		FVector ConsumableLocation = Consumable->GetActorLocation();
 
 		// Ignore the Y axis
-		PlayerLocation.Y = 0.f;
 		ConsumableLocation.Y = 0.f;
 
+		// Calculate the squared distance between the PLAYER and the consumable
 		float Distance = FVector::DistSquared(
 			PlayerLocation,
 			ConsumableLocation
 		);
 
+		// Ignore consumables outside the SearchRadius
+		if (Distance > MaxDistanceSquared) continue;
+
 		// Check if this consumable is closer than the previous one
-		if (Distance < NearestDistance)
+		if (Distance <= NearestDistance)
 		{
 			NearestDistance = Distance;
 			NearestConsumable = Consumable;

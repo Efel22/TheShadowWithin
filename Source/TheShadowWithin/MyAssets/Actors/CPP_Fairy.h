@@ -104,6 +104,11 @@ protected:
 	UPROPERTY()
 	ACPP_Consumable* NearestConsumable;
 
+	// Maximum distance at which the fairy can detect consumables
+// ?: Consumables outside this radius will be ignored
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance", meta = (ClampMin = "0.0"))
+	float SearchRadius = 500.f;
+
 	// How often the fairy searches for the nearest consumable
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance")
 	float SearchInterval = 0.5f;
