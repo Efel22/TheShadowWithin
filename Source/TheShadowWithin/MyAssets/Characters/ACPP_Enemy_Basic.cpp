@@ -171,4 +171,5 @@ void AACPP_Enemy_Basic::Defeat() {
 	GetSprite()->SetVisibility(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	bHasBeenDefeated = true;
+	GetWorldTimerManager().ClearTimer(AttackCooldownTimer);
 }
