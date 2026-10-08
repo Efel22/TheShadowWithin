@@ -15,6 +15,7 @@ Movement Functions
 #include "Components/ArrowComponent.h" // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
 #include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
+#include "MyAssets/Characters/ACPP_Enemy_Basic.h"
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -39,6 +40,8 @@ void ACPP_PlayerChar::BeginPlay()
 	SetRespawnPoint(GetActorLocation());
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~Basic Movement
 void ACPP_PlayerChar::DoMove(float Forward) {
 
 	// DEAD? DO NOTHING
@@ -118,6 +121,7 @@ void ACPP_PlayerChar::DoStopJump() {
 	}
 	StopJumping();
 }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 // *******************************************************************************
 //                                      DIE
@@ -298,6 +302,90 @@ void ACPP_PlayerChar::FaceVine()
 	}
 }
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//Simple attacks
+void ACPP_PlayerChar::DoSwordAttack() {
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Throwing hands");
+	
+	HitBoxTrace(swordHitBoxSize);
+	if (enemy) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy hit");
+		enemy->Defeat();
+	}
+
+}
+
+void ACPP_PlayerChar::DoSwordParry() {
+	//prevents the player from getting damage
+	bIsDefending = true;
+
+	
+	HitBoxTrace(swordDefenseBoxSize);
+	float parryKnockbackDirection;
+
+
+	if (GetSprite()->GetRelativeScale3D().X > 0) {
+		
+		parryKnockbackDirection = parryKnockback;
+	}
+	else {
+		
+		parryKnockbackDirection = -(parryKnockback);
+	}
+
+	if (enemy) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
+		enemy->LaunchCharacter(FVector(parryKnockbackDirection, 0, 0), true, false);
+	}
+
+}
+
+void ACPP_PlayerChar::DoSwordDefense() {
+	//prevents the player from getting damage
+	bIsDefending = true;
+
+	HitBoxTrace(swordDefenseBoxSize);
+	if (enemy) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack Defended");
+		//enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
+	}
+}
+
+void ACPP_PlayerChar::DoStopSwordDefense() {
+	bIsDefending = false;
+}
+
+void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
+	FHitResult hit;
+
+	FVector start = GetActorLocation();
+	FVector end = GetActorLocation();
+	FQuat rot = FQuat(0, 0, 0, 0);
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 100.f));
+	FCollisionQueryParams traceParams;
+	traceParams.AddIgnoredActor(this);
+
+	FCollisionObjectQueryParams objectType;
+	//~~~Adds a specific object type to search, In this case it will be the pawn object type
+	objectType.AddObjectTypesToQuery(ECC_Pawn);
+
+	//Checks the orientation of the sprite to determine the correct direction the attack should face
+	if (GetSprite()->GetRelativeScale3D().X > 0) {
+		end.X = GetActorLocation().X + hitBoxSize;
+		
+	}
+	else {
+		end.X = GetActorLocation().X + (-hitBoxSize);
+		
+	}
+
+	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
+
+		enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
+		
+	}
+}
+
 // *******************************************************************************
 //                                 HURT
 // *******************************************************************************
@@ -409,4 +497,10 @@ void ACPP_PlayerChar::EndHeal()
 	// Used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
 	bIsBeingHealed = false;
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("* * * RESET HEALED!"));
+}
+
+
+//Setters and Getters
+bool ACPP_PlayerChar::GetIsPlayerDefending() {
+	return bIsDefending;
 }
