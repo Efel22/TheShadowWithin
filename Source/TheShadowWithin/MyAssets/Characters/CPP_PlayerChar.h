@@ -10,6 +10,7 @@ Movement Functions
 #include "CoreMinimal.h"
 #include "PaperCharacter.h"
 #include "PaperZDCharacter.h"
+#include "MyAssets/Sounds/SoundData.h"
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
