@@ -459,7 +459,7 @@ void ACPP_PlayerChar::Heal()
 	if (bIsBeingHealed) return;
 
 	// Increate amount of lives
-	amountOfLives = FMath::Max(maxAmountOfLives, amountOfLives + 1 );
+	amountOfLives = FMath::Min(maxAmountOfLives, amountOfLives + 1 );
 
 	// Call Event Dispatcher
 	OnLivesChanged.Broadcast(amountOfLives);
