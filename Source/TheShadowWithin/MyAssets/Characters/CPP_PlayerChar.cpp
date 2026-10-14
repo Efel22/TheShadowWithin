@@ -69,17 +69,33 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 	// Flip the player's sprite based on the movement direction
 	// **NOTE: Doesn't work if the player is holding onto a vine!
 	// **NOTE: (!PC || ...) prevents a crash if the PlayerController is ever null
+	//if (Forward != 0.0f && (!PC || !PC->GetIsHoldingVine()))
+	//{
+	//	FVector fixedScale = GetSprite()->GetRelativeScale3D();
+
+	//	// Keep the original scale size and only change its direction
+	//	fixedScale.X = FMath::Abs(fixedScale.X) * FMath::Sign(Forward);
+
+	//	GetSprite()->SetRelativeScale3D(fixedScale);
+
+	//	// Keep the teleport throw direction in sync with the sprite
+	//	if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+	//	{
+	//		Teleport->SetFacingDirection(Forward);
+	//	}
+	//}
+
+	// Flip the player's sprite based on movement direction
 	if (Forward != 0.0f && (!PC || !PC->GetIsHoldingVine()))
 	{
-		FVector fixedScale = GetSprite()->GetRelativeScale3D();
+		// Rotate sprite instead of using negative scale
+		float RotationZ = Forward > 0.0f ? 0.0f : -180.0f;
 
-		// Keep the original scale size and only change its direction
-		fixedScale.X = FMath::Abs(fixedScale.X) * FMath::Sign(Forward);
+		GetSprite()->SetRelativeRotation(FRotator(0.0f, RotationZ, 0.0f));
 
-		GetSprite()->SetRelativeScale3D(fixedScale);
-
-		// Keep the teleport throw direction in sync with the sprite
-		if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+		// Keep teleport throw direction in sync
+		if (UTeleportAbilityComponent* Teleport =
+			FindComponentByClass<UTeleportAbilityComponent>())
 		{
 			Teleport->SetFacingDirection(Forward);
 		}
@@ -282,29 +298,47 @@ void ACPP_PlayerChar::FaceVine()
 
 	float PlayerX = CenterOfPlayerComponent->GetComponentLocation().X;
 
-	if (currentVine_PosX > PlayerX)
+	// Determine whether the vine is left or right
+	float FacingDirection = currentVine_PosX > PlayerX ? 1.0f : -1.0f;
+
+	// Rotate sprite around Z
+	float RotationZ = FacingDirection > 0.0f ? 0.0f : -180.0f;
+
+	GetSprite()->SetRelativeRotation(FRotator(0.0f, RotationZ, 0.0f));
+
+	// Keep teleport throw direction in sync
+	if (UTeleportAbilityComponent* Teleport =
+		FindComponentByClass<UTeleportAbilityComponent>())
 	{
-		// Vine is to the RIGHT of player
-		FixedScale.X = FMath::Abs(FixedScale.X);
-	}
-	else
-	{
-		// Vine is to the LEFT of player
-		FixedScale.X = -FMath::Abs(FixedScale.X);
+		Teleport->SetFacingDirection(FacingDirection);
 	}
 
-	GetSprite()->SetRelativeScale3D(FixedScale);
+	//if (currentVine_PosX > PlayerX)
+	//{
+	//	// Vine is to the RIGHT of player
+	//	FixedScale.X = FMath::Abs(FixedScale.X);
+	//}
+	//else
+	//{
+	//	// Vine is to the LEFT of player
+	//	FixedScale.X = -FMath::Abs(FixedScale.X);
+	//}
 
-	// Keep the teleport throw direction in sync with the sprite
-	if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
-	{
-		Teleport->SetFacingDirection(FixedScale.X);   // + = right, - = left
-	}
+	//GetSprite()->SetRelativeScale3D(FixedScale);
+
+	//// Keep the teleport throw direction in sync with the sprite
+	//if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+	//{
+	//	Teleport->SetFacingDirection(FixedScale.X);   // + = right, - = left
+	//}
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //Simple attacks
 void ACPP_PlayerChar::DoSwordAttack() {
+
+	if (bIsSwordAttacking) return;
+
 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Throwing hands");
 	
 	HitBoxTrace(swordHitBoxSize);
@@ -313,25 +347,62 @@ void ACPP_PlayerChar::DoSwordAttack() {
 		enemy->Defeat();
 	}
 
+	// Start the timer
+	GetWorld()->GetTimerManager().SetTimer(
+		AttackTimer,
+		this,
+		&ACPP_PlayerChar::EndSwordAttack,
+		attackCooldownInterval,
+		false
+	);
+
+	// Play Sound
+	if (Sound_SwordAttack)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_SwordAttack,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+
+	bIsSwordAttacking = true;
 }
 
 void ACPP_PlayerChar::DoSwordParry() {
+
+	if (bIsDefending) return;
+
 	//prevents the player from getting damage
 	bIsDefending = true;
 
-	
+	// Play Sound
+	if (Sound_Parry)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_Parry,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+
 	HitBoxTrace(swordDefenseBoxSize);
-	float parryKnockbackDirection;
-
-
-	if (GetSprite()->GetRelativeScale3D().X > 0) {
+	//float parryKnockbackDirection;
+	/*if (GetSprite()->GetRelativeScale3D().X > 0) {
 		
 		parryKnockbackDirection = parryKnockback;
 	}
 	else {
 		
 		parryKnockbackDirection = -(parryKnockback);
-	}
+	}*/
+
+	float RotationZ = GetSprite()->GetRelativeRotation().Yaw;
+
+	float parryKnockbackDirection =
+		FMath::IsNearlyZero(RotationZ) ? parryKnockback : -parryKnockback;
 
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
@@ -343,6 +414,18 @@ void ACPP_PlayerChar::DoSwordParry() {
 void ACPP_PlayerChar::DoSwordDefense() {
 	//prevents the player from getting damage
 	bIsDefending = true;
+
+
+	// Play Sound
+	if (Sound_Parry)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_Parry,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
 
 	HitBoxTrace(swordDefenseBoxSize);
 	if (enemy) {
@@ -370,13 +453,26 @@ void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
 	objectType.AddObjectTypesToQuery(ECC_Pawn);
 
 	//Checks the orientation of the sprite to determine the correct direction the attack should face
-	if (GetSprite()->GetRelativeScale3D().X > 0) {
+	//if (GetSprite()->GetRelativeScale3D().X > 0) {
+	//	end.X = GetActorLocation().X + hitBoxSize;
+	//	
+	//}
+	//else {
+	//	end.X = GetActorLocation().X + (-hitBoxSize);
+	//	
+	//}
+
+	float RotationZ = GetSprite()->GetRelativeRotation().Yaw;
+
+	if (FMath::IsNearlyZero(RotationZ))
+	{
+		// Facing right
 		end.X = GetActorLocation().X + hitBoxSize;
-		
 	}
-	else {
-		end.X = GetActorLocation().X + (-hitBoxSize);
-		
+	else
+	{
+		// Facing left
+		end.X = GetActorLocation().X - hitBoxSize;
 	}
 
 	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {

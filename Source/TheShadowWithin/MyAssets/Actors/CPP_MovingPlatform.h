@@ -9,6 +9,7 @@
 #include "CPP_MovingPlatform.generated.h"
 
 class UPaperSpriteComponent; // Required for sprite handling
+class UNiagaraComponent; // Required for niagara particle components
 
 UCLASS()
 class THESHADOWWITHIN_API ACPP_MovingPlatform : public AActor
@@ -34,6 +35,10 @@ protected:
 	// WHY?: This allows us to edit the platform sprite however we like without messing with its
 	//       collision!
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Components|Movement")
-	UBoxComponent* CollisionBox; 
+	UBoxComponent* CollisionBox;
+
+	// Attached particles
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Visual")
+	UNiagaraComponent* ParticlesComponent;
 
 };

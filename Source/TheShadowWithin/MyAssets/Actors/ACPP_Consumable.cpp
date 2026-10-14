@@ -24,7 +24,7 @@ ACPP_Consumable::ACPP_Consumable()
 	// Niagra component setup
 	ConsumableParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ConsumableParticlesComponent"));
 	ConsumableParticlesComponent->SetupAttachment(RootComponent);
-	ConsumableParticlesComponent->bAutoActivate = false; // ?: no arranca prendido, solo cuando se gana
+	//ConsumableParticlesComponent->bAutoActivate = false; // ?: no arranca prendido, solo cuando se gana
 
 	// Create the sphere component
 	CollectionSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollectionSphereComponent"));

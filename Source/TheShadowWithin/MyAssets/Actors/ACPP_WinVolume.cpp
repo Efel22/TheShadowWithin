@@ -30,7 +30,6 @@ AACPP_WinVolume::AACPP_WinVolume()
 	// Niagra component setup
 	WinParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("WinParticlesComponent"));
 	WinParticlesComponent->SetupAttachment(RootComponent);
-	WinParticlesComponent->bAutoActivate = false; 
 
 	// Create the sphere component
 	WinSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollectionSphereComponent"));

@@ -67,6 +67,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Defense")
 	float parryKnockback = 600;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsDefending = false;
 
 	UPROPERTY()
@@ -104,6 +105,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
 	USoundBase* Sound_HasBeenDefeated;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_SwordAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Parry;
 
 	// ***************************************************************************************************************
 	//                                                  PARTICLES
@@ -152,6 +159,14 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoSwordAttack();
+	void EndSwordAttack() { bIsSwordAttacking = false; }
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsSwordAttacking = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float attackCooldownInterval = .25f; 
+	FTimerHandle AttackTimer;
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoSwordParry();

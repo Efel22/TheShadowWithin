@@ -3,6 +3,7 @@
 
 #include "MyAssets/Actors/CPP_MovingPlatform.h"
 #include "Components/BoxComponent.h" 
+#include "NiagaraComponent.h" // Required for niagara component 
 #include "Components/InterpToMovementComponent.h"
 #include "PaperSpriteComponent.h"
 
@@ -28,5 +29,10 @@ ACPP_MovingPlatform::ACPP_MovingPlatform()
 	CollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Block); // Blocks PAWN collisions (player and enemies)
 
 	InterpMovComp = CreateDefaultSubobject<UInterpToMovementComponent>(TEXT("Interp Mov. Comp."));
+
+	// Niagra component setup
+	ParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Platform Particles Component"));
+	ParticlesComponent->SetupAttachment(RootComponent);
+
 }
 
