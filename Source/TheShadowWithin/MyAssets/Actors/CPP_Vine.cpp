@@ -106,14 +106,14 @@ void ACPP_Vine::OnDetectionBoxBeginOverlap(
 		);
 	}
 
-	// Play Particles
-	if (VineInteractParticles)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
-			VineInteractParticles,
-			GetActorLocation()
-		);
-	}
+	//// Play Particles
+	//if (VineInteractParticles)
+	//{
+	//	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
+	//		VineInteractParticles,
+	//		GetActorLocation()
+	//	);
+	//}
 }
 
 void ACPP_Vine::OnDetectionBoxEndOverlap(
@@ -150,13 +150,13 @@ void ACPP_Vine::OnDetectionBoxEndOverlap(
 		);
 	}
 
-	// Play Particles
-	if (VineInteractParticles)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
-			VineInteractParticles,
-			GetActorLocation()
-		);
-	}
+	//// Play Particles
+	//if (VineInteractParticles)
+	//{
+	//	UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
+	//		VineInteractParticles,
+	//		GetActorLocation()
+	//	);
+	//}
 
 }

@@ -11,7 +11,8 @@ Movement Functions
 #include "Blueprint/UserWidget.h" // Required to show specified widget from header file
 #include "Engine/Engine.h" // Used to print strings
 #include "MyAssets/Characters/CPP_PlayerController.h" // Required for Vine Player Sprite Facing (In DoMove() )
-#include "Kismet/GameplayStatics.h"                   // ^
+#include "Kismet/GameplayStatics.h"       
+#include "NiagaraFunctionLibrary.h" // Required for spawning niagara systems            // ^
 #include "Components/ArrowComponent.h" // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
 #include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
@@ -282,6 +283,15 @@ void ACPP_PlayerChar::StartClimbingVine()
 	) 
 	return;
 
+	// Play Particles
+	if (VineInteractParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
+			VineInteractParticles,
+			CenterOfPlayerComponent->GetComponentLocation()
+		);
+	}
+
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	if (!CMC) return;
 	CMC->SetMovementMode(MOVE_Flying);
@@ -295,6 +305,15 @@ void ACPP_PlayerChar::StopClimbingVine()
 {
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	CMC->SetMovementMode(MOVE_Falling);
+
+	// Play Particles
+	if (VineInteractParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
+			VineInteractParticles,
+			CenterOfPlayerComponent->GetComponentLocation()
+		);
+	}
 }
 
 // *******************************************************************************
