@@ -13,5 +13,8 @@ UCLASS()
 class THESHADOWWITHIN_API ACPP_EnemyAiController : public AAIController
 {
 	GENERATED_BODY()
+
+protected:
+	virtual void OnPossess(APawn* InPawn) override;
 	
 };

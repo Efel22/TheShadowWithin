@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MyAssets/Actors/Enemy/CPP_Enemy.h"
+#include "MyAssets/Characters/Enemy/CPP_Enemy.h"
 
 // Sets default values
 ACPP_Enemy::ACPP_Enemy()
@@ -23,5 +23,21 @@ void ACPP_Enemy::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ACPP_Enemy::SetEnemyHP(float newEnemyHP) {
+	enemyHP = newEnemyHP;
+}
+
+float ACPP_Enemy::GetEnemyHP() {
+	return enemyHP;
+}
+
+void ACPP_Enemy::SetEnemyDamage(float newEnemyDamage) {
+	enemyDamage = newEnemyDamage;
+}
+
+float ACPP_Enemy::GetEnemyDamage() {
+	return enemyDamage;
 }
 
