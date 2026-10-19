@@ -11,6 +11,7 @@ Movement Functions
 #include "PaperCharacter.h"
 #include "PaperZDCharacter.h"
 #include "MyAssets/Sounds/SoundData.h"
+#include "MyAssets/Characters/CPP_PlayerController.h" 
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
@@ -118,6 +119,12 @@ protected:
 
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
 	//UNiagaraSystem;
+
+
+	// ***************************************************************************************************************
+	//                                                  References
+	// ***************************************************************************************************************
+	ACPP_PlayerController* PlayerController; 
 
 public:
 	//~~~Functions

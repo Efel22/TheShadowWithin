@@ -27,6 +27,7 @@ AACPP_WinVolume::AACPP_WinVolume()
 
 	// Create the sprite component
 	SpriteComponent = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
+	SpriteComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SpriteComponent->SetupAttachment(RootComponent);
 
 	// Niagra component setup
