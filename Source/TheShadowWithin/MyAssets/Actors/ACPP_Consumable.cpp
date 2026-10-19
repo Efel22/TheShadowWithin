@@ -22,6 +22,7 @@ ACPP_Consumable::ACPP_Consumable()
 	// Create the sprite component
 	SpriteComponent = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
 	SpriteComponent->SetupAttachment(RootComponent);
+	SpriteComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Niagra component setup
 	ConsumableParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("ConsumableParticlesComponent"));
