@@ -7,6 +7,10 @@
 #include "MyAssets/Characters/CPP_PlayerChar.h" // Required for player char. casting
 #include "GameFramework/CharacterMovementComponent.h" // Required for changing the character's movement speed (FOR NOW)
 #include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
+#include "PaperTileMapActor.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "MyAssets/Characters/Enemy/CPP_EnemyAiController.h"
 #include "PaperFlipbookComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/Engine.h" // Required for on-screen rotation debugging
@@ -19,7 +23,12 @@ ACPP_Enemy_Plush::ACPP_Enemy_Plush()
 {
 	AttackCollider = CreateDefaultSubobject<USphereComponent>(TEXT("Attack Collider"));
 	AttackCollider->SetupAttachment(RootComponent);
-	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginOverlap);
+	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginAttackOverlap);
+
+	JumpCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Jump Collider"));
+	JumpCollider->SetupAttachment(RootComponent);
+	JumpCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginJumpOverlap);
+	JumpCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndJumpOverlap);
 
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -166,6 +175,29 @@ void ACPP_Enemy_Plush::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 }
 
+//When the enemy gets close to a wall it will inform the behevior tree to start climbing
+void ACPP_Enemy_Plush::OnBeginJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
+	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
+	if (level) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Touching wall");
+		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanClimb", true);
+		}
+		
+	}
+}
+
+void ACPP_Enemy_Plush::OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
+	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
+	if (level) {
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Leaving wall");
+		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanClimb", false);
+		}
+
+	}
+}
+
 //After set amount of time passes the enemy jumps based on is the player has the higher ground
 void ACPP_Enemy_Plush::EnemyJump() {
 
@@ -198,7 +230,7 @@ void ACPP_Enemy_Plush::EnemyJump() {
 	}
 }
 
-void ACPP_Enemy_Plush::OnBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
+void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
 	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
 	if (player) {
 		GetWorldTimerManager().SetTimer(AttackTimer, this, &ACPP_Enemy_Plush::AttackPlayer, attackTime, false);

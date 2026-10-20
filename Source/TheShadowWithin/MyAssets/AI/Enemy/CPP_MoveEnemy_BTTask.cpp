@@ -51,21 +51,11 @@ void UCPP_MoveEnemy_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 					int32 newFacingDirection;
 					newFacingDirection = DirectionX > 0.f ? 1 : -1;
 					enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
-					GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Moving");
+					//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Moving");
 				}
 				else {
 					FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
 				}
-					
-				
-
-
-
-
-
-
-
-
 
 			}
 		}
