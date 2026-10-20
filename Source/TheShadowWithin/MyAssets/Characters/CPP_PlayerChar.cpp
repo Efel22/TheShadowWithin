@@ -11,7 +11,8 @@ Movement Functions
 #include "Blueprint/UserWidget.h" // Required to show specified widget from header file
 #include "Engine/Engine.h" // Used to print strings
 #include "MyAssets/Characters/CPP_PlayerController.h" // Required for Vine Player Sprite Facing (In DoMove() )
-#include "Kismet/GameplayStatics.h"                   // ^
+#include "Kismet/GameplayStatics.h"       
+#include "NiagaraFunctionLibrary.h" // Required for spawning niagara systems            // ^
 #include "Components/ArrowComponent.h" // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
 #include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
@@ -36,6 +37,10 @@ void ACPP_PlayerChar::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Store the reference to the player controller
+	PlayerController = Cast<ACPP_PlayerController>(GetController());
+
+
 	// Initial Respawn point should be at player start
 	SetRespawnPoint(GetActorLocation());
 }
@@ -50,9 +55,6 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 	const FVector MoveDir = FVector(1.0f, Forward > 0.0f ? 0.1f : -0.1f, 0.0f);
 	AddMovementInput(MoveDir, Forward);
 
-	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(
-		UGameplayStatics::GetPlayerController(GetWorld(), 0)
-	);
 	/*if (!PC) {
 		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("- PlayerController is null!"));
 		return;
@@ -86,7 +88,7 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 	//}
 
 	// Flip the player's sprite based on movement direction
-	if (Forward != 0.0f && (!PC || !PC->GetIsHoldingVine()))
+	if (Forward != 0.0f && (!PlayerController || !PlayerController->GetIsHoldingVine()))
 	{
 		// Rotate sprite instead of using negative scale
 		float RotationZ = Forward > 0.0f ? 0.0f : -180.0f;
@@ -102,7 +104,7 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 	}
 
 	// Make the player face the vine regardless 
-	if (PC && PC->GetIsHoldingVine()) FaceVine();;
+	if (PlayerController && PlayerController->GetIsHoldingVine()) FaceVine();;
 }
 
 void ACPP_PlayerChar::DoClimbVine(float Forward) {
@@ -110,22 +112,43 @@ void ACPP_PlayerChar::DoClimbVine(float Forward) {
 	FaceVine();
 }
 
-void ACPP_PlayerChar::DoJump() {
+void ACPP_PlayerChar::DoJump()
+{
 	// DEAD? DO NOTHING
 	if (IsDead()) return;
 
-	Jump();
-
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
-	if (!CMC || CMC->IsFalling()) return;
+	if (!CMC) return;
+
+	// Check if the player is holding onto a vine
+	if (PlayerController && PlayerController->GetIsHoldingVine())
+	{
+		// Release the vine
+		PlayerController->SetIsHoldingVine(false);
+
+		// Restore gravity
+		StopClimbingVine();
+
+		// Launch the player upward
+		LaunchCharacter(FVector(0.0f, 0.0f, 600.0f), false, true);
+	}
+	else
+	{
+		// Prevent jumping while already in the air
+		if (CMC->IsFalling()) return;
+
+		// Normal jump
+		Jump();
+	}
 
 	// Play Sound
 	if (Sound_Jump)
 	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
 			Sound_Jump,
 			GetActorLocation(),
-			1.f,  // Volume
+			1.f, // Volume
 			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
 		);
 	}
@@ -253,6 +276,22 @@ void ACPP_PlayerChar::Respawn()
 // *******************************************************************************
 void ACPP_PlayerChar::StartClimbingVine()
 {
+	// Player cannot grab a vine if being hurt
+	if (
+		bIsBeingHurt ||
+		bIsDefending 
+	) 
+	return;
+
+	// Play Particles
+	if (VineInteractParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
+			VineInteractParticles,
+			CenterOfPlayerComponent->GetComponentLocation()
+		);
+	}
+
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	if (!CMC) return;
 	CMC->SetMovementMode(MOVE_Flying);
@@ -266,6 +305,15 @@ void ACPP_PlayerChar::StopClimbingVine()
 {
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	CMC->SetMovementMode(MOVE_Falling);
+
+	// Play Particles
+	if (VineInteractParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
+			VineInteractParticles,
+			CenterOfPlayerComponent->GetComponentLocation()
+		);
+	}
 }
 
 // *******************************************************************************
@@ -337,7 +385,13 @@ void ACPP_PlayerChar::FaceVine()
 //Simple attacks
 void ACPP_PlayerChar::DoSwordAttack() {
 
-	if (bIsSwordAttacking) return;
+	if (!PlayerController) return;
+
+	if (bIsSwordAttacking || 
+		bIsBeingHurt || 
+		bIsBeingHealed ||
+		PlayerController->GetIsHoldingVine()
+	) return;
 
 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Throwing hands");
 	
@@ -491,6 +545,11 @@ void ACPP_PlayerChar::Hurt()
 	// Basically, prevents hurt spam
 	if (bIsBeingHurt || amountOfLives < 1) return;
 
+	if (!PlayerController) return;
+
+	// If during a hurt event, the player was holding onto a vine, let go of it
+	if (PlayerController->GetIsHoldingVine()) PlayerController->SetIsHoldingVine(false);
+	
 	// Decrease amount of lives
 	amountOfLives = FMath::Max(0, amountOfLives - 1);
 

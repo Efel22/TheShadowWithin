@@ -47,8 +47,8 @@ protected:
 	USoundBase* LetGoVineSound;
 
 	// Particles that play when the vine is grabbed and let go of 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine|Visual")
-	UNiagaraSystem* VineInteractParticles;
+	/*UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine|Visual")
+	UNiagaraSystem* VineInteractParticles;*/
 
 public:	
 	// Called every frame

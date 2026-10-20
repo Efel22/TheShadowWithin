@@ -24,6 +24,9 @@ public:
 	// Sets default values for this actor's properties
 	AACPP_WinVolume();
 
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
+
 protected:
 
 	// Called when the game starts or when spawned
@@ -67,6 +70,33 @@ protected:
 		bool bFromSweep,
 		const FHitResult& SweepResult
 	);
+
+	// *******************************************************************************
+	//                             FLOATING ANIMATION
+	// *******************************************************************************
+
+	// Determines whether the sprite bobs up and down
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable | Floating")
+	bool bShouldBob = false;
+
+	// Maximum distance the sprite moves above and below its original position
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable | Floating",
+		meta = (EditCondition = "bShouldBob", ClampMin = "0.0"))
+	float BobHeight = 15.0f;
+
+	// Number of complete bobbing cycles per second
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable | Floating", meta = (EditCondition = "bShouldBob", ClampMin = "0.0"))
+	float BobFrequency = 0.5f;
+
+	// Stores the sprite's original relative position
+	FVector OriginalSpriteLocation = FVector::ZeroVector;
+
+	// Tracks how long the sprite has been floating
+	float BobTime = 0.0f;
+
+	// Updates the sprite's floating animation
+	void UpdateBobbing(float DeltaTime);
+
 
 private:
 

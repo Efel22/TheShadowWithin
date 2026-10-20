@@ -18,13 +18,16 @@
 // *******************************************************************************
 AACPP_WinVolume::AACPP_WinVolume()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Enable ticking, for now
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 
 	// ROOT
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
 	// Create the sprite component
 	SpriteComponent = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("SpriteComponent"));
+	SpriteComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SpriteComponent->SetupAttachment(RootComponent);
 
 	// Niagra component setup
@@ -34,7 +37,6 @@ AACPP_WinVolume::AACPP_WinVolume()
 	// Create the sphere component
 	WinSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollectionSphereComponent"));
 	WinSphereComponent->SetupAttachment(RootComponent);
-	WinSphereComponent->SetSphereRadius(100.0f);
 
 	// Enable overlap detection
 	WinSphereComponent->SetGenerateOverlapEvents(true);
@@ -52,6 +54,81 @@ AACPP_WinVolume::AACPP_WinVolume()
 void AACPP_WinVolume::BeginPlay()
 {
 	Super::BeginPlay();
+
+
+	// Store the sprite's original position
+	if (SpriteComponent)
+	{
+		OriginalSpriteLocation = SpriteComponent->GetRelativeLocation();
+	}
+
+	// Only enable Tick if bobbing is enabled
+	SetActorTickEnabled(bShouldBob);
+
+	// DEBUG
+	UE_LOG(LogTemp, Warning, TEXT("WIN VOLUME: %s | Bobbing: %s | Tick: %s"),
+		*GetName(),
+		bShouldBob ? TEXT("TRUE") : TEXT("FALSE"),
+		IsActorTickEnabled() ? TEXT("TRUE") : TEXT("FALSE")
+	);
+}
+
+// *******************************************************************************
+//                             TICK
+// *******************************************************************************
+void AACPP_WinVolume::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Update the sprite's floating animation
+	if (bShouldBob)
+	{
+		UpdateBobbing(DeltaTime);
+
+		// DEBUG: Show the current sprite position
+		if (GEngine && SpriteComponent)
+		{
+			GEngine->AddOnScreenDebugMessage(
+				(uint64)GetUniqueID(),
+				0.0f,
+				FColor::Green,
+				FString::Printf(
+					TEXT("WIN VOLUME BOBBING | Z: %.2f"),
+					SpriteComponent->GetRelativeLocation().Z
+				)
+			);
+		}
+	}
+}
+
+
+// *******************************************************************************
+//                             FLOATING ANIMATION
+// *******************************************************************************
+void AACPP_WinVolume::UpdateBobbing(float DeltaTime)
+{
+	if (!SpriteComponent)
+	{
+		return;
+	}
+
+	// Increase elapsed time
+	BobTime += DeltaTime;
+
+	// Calculate smooth vertical movement using a sine wave
+	// Sine automatically eases at the highest and lowest points
+	const float BobOffset = FMath::Sin(
+		BobTime * BobFrequency * 2.0f * PI
+	) * BobHeight;
+
+	// Calculate the new position relative to the sprite's original position
+	FVector NewLocation = OriginalSpriteLocation;
+
+	// Only modify the Z axis (vertical movement)
+	NewLocation.Z += BobOffset;
+
+	// Move ONLY the sprite component
+	SpriteComponent->SetRelativeLocation(NewLocation);
 }
 
 // *******************************************************************************

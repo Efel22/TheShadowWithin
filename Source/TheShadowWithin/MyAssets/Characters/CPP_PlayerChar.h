@@ -11,11 +11,13 @@ Movement Functions
 #include "PaperCharacter.h"
 #include "PaperZDCharacter.h"
 #include "MyAssets/Sounds/SoundData.h"
+#include "MyAssets/Characters/CPP_PlayerController.h" 
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
 class AACPP_Enemy_Basic;
 
+class UNiagaraSystem; // Required for playing niagara systems
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 class USoundBase; // Used to declare sound properties
 class UUserWidget; // Required for widgets
@@ -116,8 +118,16 @@ protected:
 	//                                                  PARTICLES
 	// ***************************************************************************************************************
 
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
-	//UNiagaraSystem;
+
+	// Particles that play when the vine is grabbed and let go of 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	UNiagaraSystem* VineInteractParticles;
+
+
+	// ***************************************************************************************************************
+	//                                                  References
+	// ***************************************************************************************************************
+	ACPP_PlayerController* PlayerController; 
 
 public:
 	//~~~Functions
