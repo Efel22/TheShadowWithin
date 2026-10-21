@@ -45,6 +45,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Teleport")
 	UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
 
+	UFUNCTION(BlueprintPure, Category = "Teleport")
+	USphereComponent* GetCollisionComponent() const { return Collision; }
+
+	// Used by the trajectory preview so it bounces/lands exactly like the real shard.
+	float GetFloorNormalThreshold() const { return FloorNormalThreshold; }
+	float GetWallBounceSpeedMultiplier() const { return WallBounceSpeedMultiplier; }
+
 	/** Fired the first time it touches any surface. */
 	UPROPERTY(BlueprintAssignable, Category = "Teleport")
 	FOnTeleportProjectileArmed OnArmed;

@@ -9,10 +9,19 @@
 #include "GameFramework/MovementComponent.h"
 #include "PaperCharacter.h"
 #include "PaperFlipbookComponent.h"
+#include "PaperGroupedSpriteComponent.h"
+#include "PaperSpriteComponent.h"
+#include "PaperSprite.h"
+#include "Components/SphereComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
+#include "DrawDebugHelpers.h"
 
 UTeleportAbilityComponent::UTeleportAbilityComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	// Ticks ONLY while aiming, to redraw the trajectory preview every frame.
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.TickGroup = TG_PostPhysics; // after the character has moved this frame
 }
 
 void UTeleportAbilityComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -30,6 +39,17 @@ void UTeleportAbilityComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 		Projectile->Destroy();
 	}
 	ActiveProjectile.Reset();
+
+	if (PreviewSprites)
+	{
+		PreviewSprites->DestroyComponent();
+		PreviewSprites = nullptr;
+	}
+	if (PreviewLandingMarker)
+	{
+		PreviewLandingMarker->DestroyComponent();
+		PreviewLandingMarker = nullptr;
+	}
 
 	Super::EndPlay(EndPlayReason);
 }
@@ -91,6 +111,7 @@ void UTeleportAbilityComponent::CancelAim()
 		return;
 	}
 	GetWorld()->GetTimerManager().ClearTimer(AimCycleTimer);
+	StopPreview();
 	SetState(ETeleportAbilityState::Ready);
 	OnAimCancelled.Broadcast();
 }
@@ -206,6 +227,13 @@ void UTeleportAbilityComponent::StartAiming()
 	{
 		GetWorld()->GetTimerManager().SetTimer(AimCycleTimer, this, &UTeleportAbilityComponent::AdvanceAim, AimCycleInterval, true);
 	}
+
+	if (bShowTrajectoryPreview)
+	{
+		SetComponentTickEnabled(true);
+		TimeSincePreviewUpdate = 0.f;
+		UpdateTrajectoryPreview(true); // show it immediately, not one frame later
+	}
 }
 
 void UTeleportAbilityComponent::AdvanceAim()
@@ -232,6 +260,49 @@ void UTeleportAbilityComponent::AdvanceAim()
 	}
 
 	OnAimIndexChanged.Broadcast(AimIndex);
+
+	if (State == ETeleportAbilityState::Aiming && bShowTrajectoryPreview)
+	{
+		UpdateTrajectoryPreview(true); // new angle: update right away
+	}
+}
+
+bool UTeleportAbilityComponent::ComputeLaunch(FVector& OutSpawnLocation, FVector& OutVelocity, FVector& OutPlaneNormal) const
+{
+	const UWorld* World = GetWorld();
+	const AActor* OwnerActor = GetOwner();
+	if (!World || !OwnerActor || !ProjectileClass)
+	{
+		return false;
+	}
+
+	// Direction from the hard-coded angle, mirrored by facing.
+	const FVector Forward = GetThrowForwardDirection();
+	const float AngleRad = FMath::DegreesToRadians(GetCurrentThrowAngle());
+	const FVector ThrowDir = (Forward * FMath::Cos(AngleRad) + FVector::UpVector * FMath::Sin(AngleRad)).GetSafeNormal();
+	OutPlaneNormal = FVector::CrossProduct(Forward, FVector::UpVector).GetSafeNormal();
+
+	// Spawn point; sweep from the character's centre so we never spawn inside a wall.
+	const FVector Center = OwnerActor->GetActorLocation();
+	OutSpawnLocation = Center + Forward * SpawnForwardOffset + FVector::UpVector * SpawnUpOffset;
+
+	const ACPP_TeleportShard* ProjectileCDO = ProjectileClass->GetDefaultObject<ACPP_TeleportShard>();
+	const float ProjectileRadius = ProjectileCDO ? FMath::Max(ProjectileCDO->GetCollisionRadius(), 1.f) : 8.f;
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(TeleportThrowSpawn), false, OwnerActor);
+	FHitResult SpawnHit;
+	if (World->SweepSingleByChannel(SpawnHit, Center, OutSpawnLocation, FQuat::Identity, ECC_WorldDynamic,
+		FCollisionShape::MakeSphere(ProjectileRadius), Params))
+	{
+		OutSpawnLocation = SpawnHit.Location;
+	}
+
+	OutVelocity = ThrowDir * ThrowSpeed;
+	if (bAddOwnerVelocity)
+	{
+		OutVelocity += OwnerActor->GetVelocity();
+	}
+	return true;
 }
 
 void UTeleportAbilityComponent::ThrowProjectile()
@@ -239,32 +310,13 @@ void UTeleportAbilityComponent::ThrowProjectile()
 	UWorld* World = GetWorld();
 	AActor* OwnerActor = GetOwner();
 	GetWorld()->GetTimerManager().ClearTimer(AimCycleTimer);
+	StopPreview();
 
-	if (!World || !OwnerActor || !ProjectileClass)
+	FVector SpawnLocation, LaunchVelocity, PlaneNormal;
+	if (!World || !OwnerActor || !ComputeLaunch(SpawnLocation, LaunchVelocity, PlaneNormal))
 	{
 		SetState(ETeleportAbilityState::Ready);
 		return;
-	}
-
-	// Direction from the hard-coded angle, mirrored by facing.
-	const FVector Forward = GetThrowForwardDirection();
-	const float AngleRad = FMath::DegreesToRadians(GetCurrentThrowAngle());
-	const FVector ThrowDir = (Forward * FMath::Cos(AngleRad) + FVector::UpVector * FMath::Sin(AngleRad)).GetSafeNormal();
-	const FVector PlaneNormal = FVector::CrossProduct(Forward, FVector::UpVector).GetSafeNormal();
-
-	// Spawn point; sweep from the character's centre so we never spawn inside a wall.
-	const FVector Center = OwnerActor->GetActorLocation();
-	FVector SpawnLocation = Center + Forward * SpawnForwardOffset + FVector::UpVector * SpawnUpOffset;
-
-	const ACPP_TeleportShard* ProjectileCDO = ProjectileClass->GetDefaultObject<ACPP_TeleportShard>();
-	const float ProjectileRadius = ProjectileCDO ? FMath::Max(ProjectileCDO->GetCollisionRadius(), 1.f) : 8.f;
-
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(TeleportThrowSpawn), false, OwnerActor);
-	FHitResult SpawnHit;
-	if (World->SweepSingleByChannel(SpawnHit, Center, SpawnLocation, FQuat::Identity, ECC_WorldDynamic,
-		FCollisionShape::MakeSphere(ProjectileRadius), Params))
-	{
-		SpawnLocation = SpawnHit.Location;
 	}
 
 	const FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
@@ -278,12 +330,6 @@ void UTeleportAbilityComponent::ThrowProjectile()
 		return;
 	}
 
-	FVector LaunchVelocity = ThrowDir * ThrowSpeed;
-	if (bAddOwnerVelocity)
-	{
-		LaunchVelocity += OwnerActor->GetVelocity();
-	}
-
 	Projectile->Launch(LaunchVelocity, PlaneNormal);
 	Projectile->OnArmed.AddDynamic(this, &UTeleportAbilityComponent::HandleProjectileArmed);
 	Projectile->OnDestroyed.AddDynamic(this, &UTeleportAbilityComponent::HandleProjectileDestroyed);
@@ -293,6 +339,248 @@ void UTeleportAbilityComponent::ThrowProjectile()
 	Projectile->FinishSpawning(SpawnTransform);
 
 	OnThrown.Broadcast(AimIndex, Projectile);
+}
+
+// ------------------------------------------------------------------ Trajectory preview
+
+void UTeleportAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (State != ETeleportAbilityState::Aiming || !bShowTrajectoryPreview)
+	{
+		StopPreview();
+		return;
+	}
+
+	// Throttle: recalculate at most PreviewUpdatesPerSecond times per second.
+	TimeSincePreviewUpdate += DeltaTime;
+	TimeSincePreviewRecalc += DeltaTime;
+	if (TimeSincePreviewUpdate >= 1.f / FMath::Max(PreviewUpdatesPerSecond, 1.f))
+	{
+		TimeSincePreviewUpdate = 0.f;
+		UpdateTrajectoryPreview(false);
+	}
+}
+
+void UTeleportAbilityComponent::StopPreview()
+{
+	SetComponentTickEnabled(false);
+	ClearTrajectoryPreview();
+}
+
+void UTeleportAbilityComponent::ClearTrajectoryPreview()
+{
+	if (PreviewSprites && PreviewSprites->GetInstanceCount() > 0)
+	{
+		PreviewSprites->ClearInstances();
+	}
+	if (PreviewLandingMarker)
+	{
+		PreviewLandingMarker->SetVisibility(false);
+	}
+	// Invalidate the cache so the next aim always recalculates.
+	LastPreviewStart = FVector(FLT_MAX);
+	LastPreviewVelocity = FVector(FLT_MAX);
+}
+
+void UTeleportAbilityComponent::UpdateTrajectoryPreview(bool bForce)
+{
+	UWorld* World = GetWorld();
+	AActor* OwnerActor = GetOwner();
+	if (!World || !OwnerActor || !ProjectileClass)
+	{
+		return;
+	}
+
+	FVector Position, Velocity, PlaneNormal;
+	if (!ComputeLaunch(Position, Velocity, PlaneNormal))
+	{
+		return;
+	}
+
+	// ---- Cache: if the throw hasn't changed, the arc hasn't either. Skip all the work. ----
+	// (Still refresh a few times per second in case something moved into the path.)
+	const bool bUnchanged = Position.Equals(LastPreviewStart, 0.5f) && Velocity.Equals(LastPreviewVelocity, 0.5f);
+	if (!bForce && bUnchanged && TimeSincePreviewRecalc < 0.25f)
+	{
+		return;
+	}
+	LastPreviewStart = Position;
+	LastPreviewVelocity = Velocity;
+	TimeSincePreviewRecalc = 0.f;
+
+	// Copy the real shard's physics + collision settings from its class defaults,
+	// so the preview bounces and lands exactly where the real one will.
+	const ACPP_TeleportShard* CDO = ProjectileClass->GetDefaultObject<ACPP_TeleportShard>();
+	if (!CDO)
+	{
+		return;
+	}
+	const UProjectileMovementComponent* CDOMovement = CDO->GetProjectileMovement();
+	const USphereComponent* CDOCollision = CDO->GetCollisionComponent();
+
+	const float GravityScale = CDOMovement ? CDOMovement->ProjectileGravityScale : 1.f;
+	const FVector Gravity(0.f, 0.f, World->GetGravityZ() * GravityScale);
+	const float Radius = FMath::Max(CDO->GetCollisionRadius(), 1.f);
+	const float FloorThreshold = CDO->GetFloorNormalThreshold();
+	const float BounceMultiplier = CDO->GetWallBounceSpeedMultiplier();
+
+	// Keep the simulation on the 2D plane, like the real shard's plane constraint.
+	Velocity = FVector::VectorPlaneProject(Velocity, PlaneNormal);
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(TeleportPreview), false, OwnerActor);
+	FCollisionResponseParams ResponseParams;
+	if (CDOCollision)
+	{
+		ResponseParams.CollisionResponse = CDOCollision->GetCollisionResponseToChannels();
+	}
+	const ECollisionChannel Channel = CDOCollision ? CDOCollision->GetCollisionObjectType() : ECC_WorldDynamic;
+	const FCollisionShape Shape = FCollisionShape::MakeSphere(Radius);
+
+	// ---- Simulate the flight, placing dots as we go ----
+	const float TimeStep = FMath::Clamp(PreviewTimeStep, 0.008f, 0.1f);
+	const float Spacing = FMath::Max(DotSpacing, 1.f);
+	const int32 DotCap = FMath::Max(MaxPreviewDots, 2);
+
+	TArray<FVector, TInlineAllocator<64>> DotPositions;
+	DotPositions.Add(Position); // first dot at the hand
+	float DistanceSinceLastDot = 0.f;
+
+	auto AddSegmentDots = [&](const FVector& A, const FVector& B)
+		{
+			const float SegmentLength = FVector::Dist(A, B);
+			float Along = 0.f;
+			while (DotPositions.Num() < DotCap && DistanceSinceLastDot + (SegmentLength - Along) >= Spacing)
+			{
+				Along += Spacing - DistanceSinceLastDot;
+				DotPositions.Add(FMath::Lerp(A, B, SegmentLength > 0.f ? Along / SegmentLength : 0.f));
+				DistanceSinceLastDot = 0.f;
+			}
+			DistanceSinceLastDot += SegmentLength - Along;
+		};
+
+	bool bLanded = false;
+	FVector LandingPoint = FVector::ZeroVector;
+	int32 Bounces = 0;
+
+	for (float Time = 0.f; Time < MaxPreviewTime && DotPositions.Num() < DotCap; Time += TimeStep)
+	{
+		const FVector Delta = Velocity * TimeStep + 0.5f * Gravity * TimeStep * TimeStep;
+		Velocity += Gravity * TimeStep;
+		const FVector Target = Position + Delta;
+
+		FHitResult Hit;
+		if (World->SweepSingleByChannel(Hit, Position, Target, FQuat::Identity, Channel, Shape, Params, ResponseParams))
+		{
+			AddSegmentDots(Position, Hit.Location);
+			Position = Hit.Location;
+
+			const FVector Normal = Hit.ImpactNormal;
+			if (Normal.Z >= FloorThreshold)
+			{
+				// Floor: the real shard stops dead here.
+				bLanded = true;
+				LandingPoint = Position;
+				break;
+			}
+
+			// Wall / ceiling: mirror the velocity, same as ACPP_TeleportShard::HandleBounce.
+			if (++Bounces > MaxPreviewBounces)
+			{
+				break;
+			}
+			Velocity = FVector::VectorPlaneProject(Velocity.MirrorByVector(Normal) * BounceMultiplier, PlaneNormal);
+			Position += Normal * 0.5f; // step off the surface so the next sweep doesn't start inside it
+		}
+		else
+		{
+			AddSegmentDots(Position, Target);
+			Position = Target;
+		}
+	}
+
+	// ---- Draw ----
+	if (TrajectoryDotSprite)
+	{
+		if (!PreviewSprites)
+		{
+			PreviewSprites = NewObject<UPaperGroupedSpriteComponent>(OwnerActor, TEXT("TeleportTrajectoryPreview"));
+			PreviewSprites->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			PreviewSprites->SetGenerateOverlapEvents(false);
+			PreviewSprites->SetCastShadow(false);
+			PreviewSprites->RegisterComponent();
+			PreviewSprites->SetWorldTransform(FTransform::Identity);
+		}
+
+		// Reuse existing dots instead of deleting and recreating them every update:
+		// add/remove only the difference, move the rest, and refresh the render data once.
+		const int32 NumDots = DotPositions.Num();
+		while (PreviewSprites->GetInstanceCount() > NumDots)
+		{
+			PreviewSprites->RemoveInstance(PreviewSprites->GetInstanceCount() - 1);
+		}
+		const int32 Existing = PreviewSprites->GetInstanceCount();
+
+		for (int32 i = 0; i < NumDots; ++i)
+		{
+			const float T = NumDots > 1 ? float(i) / float(NumDots - 1) : 0.f;
+			FLinearColor Color = DotColor;
+			Color.A = FMath::Lerp(DotColor.A, EndDotAlpha * DotColor.A, T);
+			const FTransform DotTransform(FRotator::ZeroRotator, DotPositions[i] + PreviewOffset, FVector(DotScale));
+
+			if (i < Existing)
+			{
+				PreviewSprites->UpdateInstanceTransform(i, DotTransform, true, false);
+				PreviewSprites->UpdateInstanceColor(i, Color, false);
+			}
+			else
+			{
+				PreviewSprites->AddInstance(DotTransform, TrajectoryDotSprite, true, Color);
+			}
+		}
+		PreviewSprites->MarkRenderStateDirty();
+
+		// Landing marker: one separate sprite, just moved and shown/hidden.
+		if (bLanded)
+		{
+			if (!PreviewLandingMarker)
+			{
+				PreviewLandingMarker = NewObject<UPaperSpriteComponent>(OwnerActor, TEXT("TeleportLandingMarker"));
+				PreviewLandingMarker->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+				PreviewLandingMarker->SetGenerateOverlapEvents(false);
+				PreviewLandingMarker->SetCastShadow(false);
+				PreviewLandingMarker->RegisterComponent();
+			}
+			PreviewLandingMarker->SetSprite(LandingMarkerSprite ? LandingMarkerSprite.Get() : TrajectoryDotSprite.Get());
+			PreviewLandingMarker->SetSpriteColor(DotColor);
+			PreviewLandingMarker->SetWorldLocationAndRotation(LandingPoint + PreviewOffset, FRotator::ZeroRotator);
+			PreviewLandingMarker->SetWorldScale3D(FVector(LandingMarkerScale));
+			PreviewLandingMarker->SetVisibility(true);
+		}
+		else if (PreviewLandingMarker)
+		{
+			PreviewLandingMarker->SetVisibility(false);
+		}
+	}
+#if ENABLE_DRAW_DEBUG
+	else
+	{
+		// No dot sprite assigned yet: temporary debug dots (editor/dev builds only).
+		// Debug points expire, so always redraw them, and keep each set alive until the next update.
+		LastPreviewStart = FVector(FLT_MAX);
+		const float LifeTime = 1.1f / FMath::Max(PreviewUpdatesPerSecond, 1.f);
+		const float DebugSize = FMath::Max(Radius * 0.5f, 4.f);
+		for (const FVector& Dot : DotPositions)
+		{
+			DrawDebugPoint(World, Dot + PreviewOffset, DebugSize * DotScale, DotColor.ToFColor(true), false, LifeTime, SDPG_Foreground);
+		}
+		if (bLanded)
+		{
+			DrawDebugPoint(World, LandingPoint + PreviewOffset, DebugSize * LandingMarkerScale, FColor::Cyan, false, LifeTime, SDPG_Foreground);
+		}
+	}
+#endif
 }
 
 void UTeleportAbilityComponent::HandleProjectileArmed(ACPP_TeleportShard* Projectile)

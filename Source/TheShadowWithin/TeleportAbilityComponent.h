@@ -16,6 +16,9 @@
 #include "TeleportAbilityComponent.generated.h"
 
 class ACPP_TeleportShard;
+class UPaperSprite;
+class UPaperGroupedSpriteComponent;
+class UPaperSpriteComponent;
 
 UENUM(BlueprintType)
 enum class ETeleportAbilityState : uint8
@@ -199,8 +202,63 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
 	float TeleportSurfacePadding = 2.f;
 
+	// ---------- Trajectory preview (dotted arc shown while aiming) ----------
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	bool bShowTrajectoryPreview = true;
+
+	/** Small sprite used for each dot. If empty, debug dots are drawn instead (editor/dev builds only). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	TObjectPtr<UPaperSprite> TrajectoryDotSprite;
+
+	/** Sprite drawn where the shard will come to rest. If empty, a bigger dot is used. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	TObjectPtr<UPaperSprite> LandingMarkerSprite;
+
+	/** World-unit distance between dots along the arc. Raise it for fewer dots. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "1.0"))
+	float DotSpacing = 60.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.01"))
+	float DotScale = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.01"))
+	float LandingMarkerScale = 2.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	FLinearColor DotColor = FLinearColor::White;
+
+	/** Dots fade from DotColor's alpha down to this alpha at the end of the arc (1 = no fade). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float EndDotAlpha = 0.35f;
+
+	/** How many seconds of flight to predict. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.1"))
+	float MaxPreviewTime = 3.f;
+
+	/** How many wall/ceiling bounces the preview follows before stopping. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0"))
+	int32 MaxPreviewBounces = 3;
+
+	/** Offset applied to every dot, e.g. toward the camera so tiles never hide them. Your camera sits on +Y. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	FVector PreviewOffset = FVector(0.f, 10.f, 0.f);
+
+	// ---------- Preview performance ----------
+	/** Simulation step in seconds. Bigger = cheaper (fewer collision checks), slightly less precise. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview|Performance", meta = (ClampMin = "0.008", ClampMax = "0.1"))
+	float PreviewTimeStep = 0.033f;
+
+	/** How many times per second the arc is recalculated while aiming (it only recalculates if something changed). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview|Performance", meta = (ClampMin = "5.0", ClampMax = "120.0"))
+	float PreviewUpdatesPerSecond = 30.f;
+
+	/** Hard cap on dots drawn, so a very long arc can never get expensive. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview|Performance", meta = (ClampMin = "2", ClampMax = "200"))
+	int32 MaxPreviewDots = 40;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
 	void SetState(ETeleportAbilityState NewState);
@@ -210,6 +268,14 @@ private:
 	void TryTeleport();
 	void StartCooldown();
 	void FinishCooldown();
+
+	/** Where the shard would spawn and how fast, for the current aim angle. Shared by the real throw and the preview. */
+	bool ComputeLaunch(FVector& OutSpawnLocation, FVector& OutVelocity, FVector& OutPlaneNormal) const;
+
+	/** bForce = recalculate even if the throw start/velocity did not change. */
+	void UpdateTrajectoryPreview(bool bForce = false);
+	void ClearTrajectoryPreview();
+	void StopPreview();
 
 	UFUNCTION()
 	void HandleProjectileArmed(ACPP_TeleportShard* Projectile);
@@ -227,4 +293,16 @@ private:
 	TWeakObjectPtr<ACPP_TeleportShard> ActiveProjectile;
 	FTimerHandle AimCycleTimer;
 	FTimerHandle CooldownTimer;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperGroupedSpriteComponent> PreviewSprites;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperSpriteComponent> PreviewLandingMarker;
+
+	// Preview cache: skip the simulation when nothing changed since last time.
+	FVector LastPreviewStart = FVector(FLT_MAX);
+	FVector LastPreviewVelocity = FVector(FLT_MAX);
+	float TimeSincePreviewUpdate = 0.f;
+	float TimeSincePreviewRecalc = 0.f;
 };
