@@ -16,12 +16,12 @@ UCPP_ClimbWall_BTTask::UCPP_ClimbWall_BTTask(FObjectInitializer const& ObjectIni
 //When executed it will find the patrol path on the next index so that the ai can move towrds it
 EBTNodeResult::Type UCPP_ClimbWall_BTTask::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-	if (controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
+	if (auto* const controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
 	{
 		//Blackboard components
 		
 			//Enemy
-			if (enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
+			if (auto* enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
 			{
 				enemy->GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 				
@@ -38,12 +38,12 @@ void UCPP_ClimbWall_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 	Super::TickTask(OwnerComp, NodeMemory, DeltaSeconds);
 
 	//Enemy controller
-	if (controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
+	if (auto* const controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
 	{
 		
 			
 			//Enemy
-			if (enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
+			if (auto* enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
 			{
 				enemy->AddMovementInput(FVector(0, 0, 1), 1);
 			}
@@ -53,12 +53,12 @@ void UCPP_ClimbWall_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 }
 
 EBTNodeResult::Type UCPP_ClimbWall_BTTask::AbortTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) {
-	if (controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
+	if (auto* const controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
 	{
 		//Blackboard components
 
 			//Enemy
-		if (enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
+		if (auto* enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
 		{
 			enemy->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
