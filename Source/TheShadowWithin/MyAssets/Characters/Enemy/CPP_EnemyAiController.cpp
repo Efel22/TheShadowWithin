@@ -49,6 +49,7 @@ void ACPP_EnemyAiController::SetupPerceptionSystem() {
 void ACPP_EnemyAiController::OnTargetDetected(AActor* Actor, FAIStimulus const Stimulus) {
 	if (auto* const ch = Cast<ACPP_PlayerChar>(Actor)) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, "I FOUND YOU!!!");
+		GetBlackboardComponent()->SetValueAsBool("CanSeePlayer", Stimulus.WasSuccessfullySensed());
 	}
 
 	/*if (auto* const ch = Cast<ASpaceship_CPP>(Actor)) {
