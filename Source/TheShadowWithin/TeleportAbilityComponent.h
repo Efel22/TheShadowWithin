@@ -16,6 +16,9 @@
 #include "TeleportAbilityComponent.generated.h"
 
 class ACPP_TeleportShard;
+class UPaperSprite;
+class UPaperGroupedSpriteComponent;
+class UPaperSpriteComponent;
 
 UENUM(BlueprintType)
 enum class ETeleportAbilityState : uint8
@@ -32,6 +35,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeleportAimIndexChanged, int32, A
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeleportThrown, int32, AimIndex, ACPP_TeleportShard*, Projectile);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeleported, FVector, FromLocation, FVector, ToLocation);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTeleportSimpleEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeleportShardHitEnemy, AActor*, Enemy);
+
+/** Bookkeeping for an enemy frozen by the shard (not exposed to Blueprints). */
+struct FTeleportStunInfo
+{
+	FTimerHandle Timer;
+	float OriginalTimeDilation = 1.f;
+};
 
 UCLASS(ClassGroup = (Abilities), Blueprintable, meta = (BlueprintSpawnableComponent))
 class UTeleportAbilityComponent : public UActorComponent
@@ -73,6 +84,14 @@ public:
 	/** Abort the aim without throwing (e.g. on damage/death). */
 	UFUNCTION(BlueprintCallable, Category = "Teleport")
 	void CancelAim();
+
+	/** Full reset (call on death / respawn): cancels aiming, removes the shard without a fizzle,
+	 *  ends any hit-stop and, if bClearCooldown, makes the ability ready immediately. */
+	UFUNCTION(BlueprintCallable, Category = "Teleport")
+	void ResetAbility(bool bClearCooldown = true);
+
+	UFUNCTION(BlueprintPure, Category = "Teleport")
+	bool IsOnCooldown() const { return State == ETeleportAbilityState::Cooldown; }
 
 	// ---------- Queries (use these in your PaperZD AnimBP / HUD) ----------
 	UFUNCTION(BlueprintPure, Category = "Teleport")
@@ -146,6 +165,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
 	FOnTeleportSimpleEvent OnCooldownFinished;
 
+	/** The shard hit an enemy (after damage/stun were applied). Use for sounds / flashes. */
+	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
+	FOnTeleportShardHitEnemy OnShardHitEnemy;
+
+	/** ResetAbility was called. */
+	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
+	FOnTeleportSimpleEvent OnAbilityReset;
+
 	// ---------- Settings ----------
 	/** Locked until the player unlocks it. Tick this in the character defaults while testing. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleport")
@@ -191,16 +218,97 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Cooldown")
 	bool bCooldownOnFizzle = true;
 
-	/** Kill the character's momentum on arrival (ender pearl style). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
-	bool bResetVelocityOnTeleport = true;
+	// ---------- Momentum ----------
+	/** Share of the player's horizontal speed kept after teleporting. 0 = stop dead, 1 = keep all of it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Momentum", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HorizontalMomentumKept = 0.5f;
+
+	/** Share of the player's vertical speed kept (falling/jumping). 0 is usually best so teleports never "slam" you down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Momentum", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float VerticalMomentumKept = 0.f;
+
+	// ---------- Hit-stop (tiny pause on arrival) ----------
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|HitStop")
+	bool bHitStopOnArrival = true;
+
+	/** Real-time length of the pause, in seconds. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|HitStop", meta = (ClampMin = "0.0", ClampMax = "0.5"))
+	float HitStopDuration = 0.06f;
+
+	/** Game speed during the pause (0.05 = 5% speed, almost frozen). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|HitStop", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+	float HitStopTimeDilation = 0.05f;
+
+	// ---------- Enemies ----------
+	/** Damage dealt to an enemy hit by the shard (sent through Unreal's damage system: Event AnyDamage). 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies", meta = (ClampMin = "0.0"))
+	float EnemyDamage = 0.f;
+
+	/** Seconds an enemy is frozen in place after being hit. 0 = no stun. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies", meta = (ClampMin = "0.0"))
+	float EnemyStunDuration = 1.5f;
 
 	/** Extra gap between the character's capsule and the floor it lands on. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
 	float TeleportSurfacePadding = 2.f;
 
+	// ---------- Trajectory preview (dotted arc shown while aiming) ----------
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	bool bShowTrajectoryPreview = true;
+
+	/** Small sprite used for each dot. If empty, debug dots are drawn instead (editor/dev builds only). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	TObjectPtr<UPaperSprite> TrajectoryDotSprite;
+
+	/** Sprite drawn where the shard will come to rest. If empty, a bigger dot is used. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	TObjectPtr<UPaperSprite> LandingMarkerSprite;
+
+	/** World-unit distance between dots along the arc. Raise it for fewer dots. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "1.0"))
+	float DotSpacing = 60.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.01"))
+	float DotScale = 1.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.01"))
+	float LandingMarkerScale = 2.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	FLinearColor DotColor = FLinearColor::White;
+
+	/** Dots fade from DotColor's alpha down to this alpha at the end of the arc (1 = no fade). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float EndDotAlpha = 0.35f;
+
+	/** How many seconds of flight to predict. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0.1"))
+	float MaxPreviewTime = 3.f;
+
+	/** How many wall/ceiling bounces the preview follows before stopping. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview", meta = (ClampMin = "0"))
+	int32 MaxPreviewBounces = 3;
+
+	/** Offset applied to every dot, e.g. toward the camera so tiles never hide them. Your camera sits on +Y. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview")
+	FVector PreviewOffset = FVector(0.f, 10.f, 0.f);
+
+	// ---------- Preview performance ----------
+	/** Simulation step in seconds. Bigger = cheaper (fewer collision checks), slightly less precise. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview|Performance", meta = (ClampMin = "0.008", ClampMax = "0.1"))
+	float PreviewTimeStep = 0.033f;
+
+	/** How many times per second the arc is recalculated while aiming (it only recalculates if something changed). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview|Performance", meta = (ClampMin = "5.0", ClampMax = "120.0"))
+	float PreviewUpdatesPerSecond = 30.f;
+
+	/** Hard cap on dots drawn, so a very long arc can never get expensive. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Preview|Performance", meta = (ClampMin = "2", ClampMax = "200"))
+	int32 MaxPreviewDots = 40;
+
 protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 private:
 	void SetState(ETeleportAbilityState NewState);
@@ -210,6 +318,23 @@ private:
 	void TryTeleport();
 	void StartCooldown();
 	void FinishCooldown();
+
+	/** Where the shard would spawn and how fast, for the current aim angle. Shared by the real throw and the preview. */
+	bool ComputeLaunch(FVector& OutSpawnLocation, FVector& OutVelocity, FVector& OutPlaneNormal) const;
+
+	/** bForce = recalculate even if the throw start/velocity did not change. */
+	void UpdateTrajectoryPreview(bool bForce = false);
+	void ClearTrajectoryPreview();
+	void StopPreview();
+
+	void StartHitStop();
+	void EndHitStop();
+
+	UFUNCTION()
+	void HandleShardHitEnemy(ACPP_TeleportShard* Projectile, AActor* Enemy);
+
+	void StunEnemy(AActor* Enemy, float Duration);
+	void UnstunEnemy(TWeakObjectPtr<AActor> Enemy);
 
 	UFUNCTION()
 	void HandleProjectileArmed(ACPP_TeleportShard* Projectile);
@@ -227,4 +352,22 @@ private:
 	TWeakObjectPtr<ACPP_TeleportShard> ActiveProjectile;
 	FTimerHandle AimCycleTimer;
 	FTimerHandle CooldownTimer;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperGroupedSpriteComponent> PreviewSprites;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UPaperSpriteComponent> PreviewLandingMarker;
+
+	FTimerHandle HitStopTimer;
+	bool bHitStopActive = false;
+	float SavedTimeDilation = 1.f;
+
+	TMap<TWeakObjectPtr<AActor>, FTeleportStunInfo> StunnedEnemies;
+
+	// Preview cache: skip the simulation when nothing changed since last time.
+	FVector LastPreviewStart = FVector(FLT_MAX);
+	FVector LastPreviewVelocity = FVector(FLT_MAX);
+	float TimeSincePreviewUpdate = 0.f;
+	float TimeSincePreviewRecalc = 0.f;
 };
