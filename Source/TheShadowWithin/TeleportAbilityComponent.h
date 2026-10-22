@@ -35,6 +35,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeleportAimIndexChanged, int32, A
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeleportThrown, int32, AimIndex, ACPP_TeleportShard*, Projectile);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeleported, FVector, FromLocation, FVector, ToLocation);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTeleportSimpleEvent);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeleportShardHitEnemy, AActor*, Enemy);
+
+/** Bookkeeping for an enemy frozen by the shard (not exposed to Blueprints). */
+struct FTeleportStunInfo
+{
+	FTimerHandle Timer;
+	float OriginalTimeDilation = 1.f;
+};
 
 UCLASS(ClassGroup = (Abilities), Blueprintable, meta = (BlueprintSpawnableComponent))
 class UTeleportAbilityComponent : public UActorComponent
@@ -76,6 +84,14 @@ public:
 	/** Abort the aim without throwing (e.g. on damage/death). */
 	UFUNCTION(BlueprintCallable, Category = "Teleport")
 	void CancelAim();
+
+	/** Full reset (call on death / respawn): cancels aiming, removes the shard without a fizzle,
+	 *  ends any hit-stop and, if bClearCooldown, makes the ability ready immediately. */
+	UFUNCTION(BlueprintCallable, Category = "Teleport")
+	void ResetAbility(bool bClearCooldown = true);
+
+	UFUNCTION(BlueprintPure, Category = "Teleport")
+	bool IsOnCooldown() const { return State == ETeleportAbilityState::Cooldown; }
 
 	// ---------- Queries (use these in your PaperZD AnimBP / HUD) ----------
 	UFUNCTION(BlueprintPure, Category = "Teleport")
@@ -149,6 +165,14 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
 	FOnTeleportSimpleEvent OnCooldownFinished;
 
+	/** The shard hit an enemy (after damage/stun were applied). Use for sounds / flashes. */
+	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
+	FOnTeleportShardHitEnemy OnShardHitEnemy;
+
+	/** ResetAbility was called. */
+	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
+	FOnTeleportSimpleEvent OnAbilityReset;
+
 	// ---------- Settings ----------
 	/** Locked until the player unlocks it. Tick this in the character defaults while testing. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleport")
@@ -194,9 +218,35 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Cooldown")
 	bool bCooldownOnFizzle = true;
 
-	/** Kill the character's momentum on arrival (ender pearl style). */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
-	bool bResetVelocityOnTeleport = true;
+	// ---------- Momentum ----------
+	/** Share of the player's horizontal speed kept after teleporting. 0 = stop dead, 1 = keep all of it. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Momentum", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HorizontalMomentumKept = 0.5f;
+
+	/** Share of the player's vertical speed kept (falling/jumping). 0 is usually best so teleports never "slam" you down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Momentum", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float VerticalMomentumKept = 0.f;
+
+	// ---------- Hit-stop (tiny pause on arrival) ----------
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|HitStop")
+	bool bHitStopOnArrival = true;
+
+	/** Real-time length of the pause, in seconds. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|HitStop", meta = (ClampMin = "0.0", ClampMax = "0.5"))
+	float HitStopDuration = 0.06f;
+
+	/** Game speed during the pause (0.05 = 5% speed, almost frozen). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|HitStop", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+	float HitStopTimeDilation = 0.05f;
+
+	// ---------- Enemies ----------
+	/** Damage dealt to an enemy hit by the shard (sent through Unreal's damage system: Event AnyDamage). 0 = none. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies", meta = (ClampMin = "0.0"))
+	float EnemyDamage = 0.f;
+
+	/** Seconds an enemy is frozen in place after being hit. 0 = no stun. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies", meta = (ClampMin = "0.0"))
+	float EnemyStunDuration = 1.5f;
 
 	/** Extra gap between the character's capsule and the floor it lands on. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
@@ -277,6 +327,15 @@ private:
 	void ClearTrajectoryPreview();
 	void StopPreview();
 
+	void StartHitStop();
+	void EndHitStop();
+
+	UFUNCTION()
+	void HandleShardHitEnemy(ACPP_TeleportShard* Projectile, AActor* Enemy);
+
+	void StunEnemy(AActor* Enemy, float Duration);
+	void UnstunEnemy(TWeakObjectPtr<AActor> Enemy);
+
 	UFUNCTION()
 	void HandleProjectileArmed(ACPP_TeleportShard* Projectile);
 
@@ -299,6 +358,12 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPaperSpriteComponent> PreviewLandingMarker;
+
+	FTimerHandle HitStopTimer;
+	bool bHitStopActive = false;
+	float SavedTimeDilation = 1.f;
+
+	TMap<TWeakObjectPtr<AActor>, FTeleportStunInfo> StunnedEnemies;
 
 	// Preview cache: skip the simulation when nothing changed since last time.
 	FVector LastPreviewStart = FVector(FLT_MAX);
