@@ -69,6 +69,18 @@ protected:
 	bool bDestroyOnCollect = true;
 
 	// *******************************************************************************
+	//                             DARKNESS
+	// *******************************************************************************
+
+	// If true, adds darkness. Otherwise, removes darkness.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable | Darkness")
+	bool bAddsDarkness = false;
+
+	// Amount of darkness added or removed when collected
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable | Darkness", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DarknessAmount = 0.1f;
+
+	// *******************************************************************************
 	//                             FLOATING ANIMATION
 	// *******************************************************************************
 
