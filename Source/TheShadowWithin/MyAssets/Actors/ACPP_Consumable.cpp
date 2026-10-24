@@ -3,6 +3,7 @@
 #include "PaperSpriteComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
+#include "MyAssets/GM/CPP_TSWGameMode.h"
 #include "Kismet/GameplayStatics.h" // Required for play_sound usage
 #include "NiagaraSystem.h" // Required for niagara system usage
 #include "NiagaraComponent.h" // Required for niagara component
@@ -140,6 +141,28 @@ void ACPP_Consumable::Collect(ACPP_PlayerChar* Player)
 	if (!Player)
 	{
 		return;
+	}
+
+	// *******************************************************************************
+	//                             DARKNESS
+	// *******************************************************************************
+
+	// Get the current GameMode
+	ACPP_TSWGameMode* TSWGameMode = Cast<ACPP_TSWGameMode>(
+		UGameplayStatics::GetGameMode(GetWorld())
+	);
+
+	// Make sure the GameMode exists
+	if (TSWGameMode && DarknessAmount > 0.0f)
+	{
+		if (bAddsDarkness)
+		{
+			TSWGameMode->AddDarkness(DarknessAmount);
+		}
+		else
+		{
+			TSWGameMode->RemoveDarkness(DarknessAmount);
+		}
 	}
 
 	// Restore player health (This funciton doesn't exist yet)
