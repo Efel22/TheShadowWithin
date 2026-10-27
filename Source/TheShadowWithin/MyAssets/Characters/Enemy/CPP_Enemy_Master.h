@@ -6,6 +6,7 @@
 #include "PaperZDCharacter.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "MyAssets/AI/Enemy/CPP_PatrolPoint.h"
+#include "CPP_EnemyActionsInterface.h"
 #include "CPP_Enemy_Master.generated.h"
 
 class ACPP_PlayerChar;
@@ -15,7 +16,7 @@ class ACPP_PlayerChar;
  * 
  */
 UCLASS()
-class THESHADOWWITHIN_API ACPP_Enemy_Master : public APaperZDCharacter
+class THESHADOWWITHIN_API ACPP_Enemy_Master : public APaperZDCharacter, public ICPP_EnemyActionsInterface
 {
 	GENERATED_BODY()
 	
@@ -35,6 +36,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float enemyDamage;
+
+	//void AttackPlayer_Implementation() override;
 
 	// *******************************************************************************
 	//                             SPRITE ROTATION

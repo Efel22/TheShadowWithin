@@ -21,9 +21,10 @@
 // ?: Looks pretty :D
 ACPP_Enemy_Plush::ACPP_Enemy_Plush()
 {
-	AttackCollider = CreateDefaultSubobject<USphereComponent>(TEXT("Attack Collider"));
+	AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collider"));
 	AttackCollider->SetupAttachment(RootComponent);
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginAttackOverlap);
+	AttackCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndAttackOverlap);
 
 	JumpCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Jump Collider"));
 	JumpCollider->SetupAttachment(RootComponent);
@@ -233,8 +234,24 @@ void ACPP_Enemy_Plush::EnemyJump() {
 void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
 	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
 	if (player) {
-		GetWorldTimerManager().SetTimer(AttackTimer, this, &ACPP_Enemy_Plush::AttackPlayer, attackTime, false);
-		bEnemyIsAttacking = true;
+		//GetWorldTimerManager().SetTimer(AttackTimer, this, &ACPP_Enemy_Plush::AttackPlayer, attackTime, false);
+		//bEnemyIsAttacking = true;
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "You Are being attacked");
+		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanAttackPlayer", true);
+		}
+
+	}
+}
+
+void ACPP_Enemy_Plush::OnEndAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
+	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
+	if (player) {
+		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanAttackPlayer", false);
+		}
+		StopAttack();
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Stop");
 	}
 }
 
@@ -299,6 +316,14 @@ void ACPP_Enemy_Plush::AttackPlayer() {
 			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
 		);
 	}
+}
+
+void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "You Are being attacked");
+}
+
+void ACPP_Enemy_Plush::StopAttack() {
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack has stopped");
 }
 
 void ACPP_Enemy_Plush::Defeat() {

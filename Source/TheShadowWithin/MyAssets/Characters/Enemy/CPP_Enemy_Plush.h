@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MyAssets/Characters/Enemy/CPP_Enemy_Master.h"
+#include "CPP_EnemyActionsInterface.h"
 #include "CPP_Enemy_Plush.generated.h"
 
 
@@ -58,11 +59,13 @@ protected:
 	//~~~Enemy Attack
 	//Attack Collider
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	USphereComponent* AttackCollider;
+	UBoxComponent* AttackCollider;
 
 	UFUNCTION()
 	void OnBeginAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	UFUNCTION()
+	void OnEndAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	// *******************************************************************************
 	//                                   ATTACK 
@@ -76,6 +79,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
 	bool bEnemyIsAttacking = false;
+
+	void AttackPlayer_Implementation() override;
+
+	void StopAttack();
 
 	//Attack Timer
 	FTimerHandle AttackTimer;

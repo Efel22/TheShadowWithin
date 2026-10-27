@@ -25,4 +25,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void LookForPlayer();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void AttackPlayer();
 };
