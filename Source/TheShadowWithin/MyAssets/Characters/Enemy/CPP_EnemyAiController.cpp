@@ -52,6 +52,7 @@ void ACPP_EnemyAiController::OnTargetDetected(AActor* Actor, FAIStimulus const S
 		GetBlackboardComponent()->SetValueAsBool("CanSeePlayer", Stimulus.WasSuccessfullySensed());
 	}
 
+	
 	/*if (auto* const ch = Cast<ASpaceship_CPP>(Actor)) {
 		GetBlackboardComponent()->SetValueAsBool("CanSeePlayer", Stimulus.WasSuccessfullySensed());
 	}*/

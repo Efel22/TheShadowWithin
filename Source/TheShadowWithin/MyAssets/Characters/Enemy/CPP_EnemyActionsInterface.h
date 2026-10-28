@@ -28,4 +28,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void AttackPlayer();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void DefeatEnemy();
 };

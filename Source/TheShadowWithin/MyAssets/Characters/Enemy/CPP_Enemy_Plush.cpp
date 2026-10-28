@@ -11,6 +11,8 @@
 #include "PaperTileMapActor.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "MyAssets/Characters/Enemy/CPP_EnemyAiController.h"
+#include "Perception/AIPerceptionComponent.h"
+#include "Perception/AISenseConfig_Sight.h"
 #include "PaperFlipbookComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/Engine.h" // Required for on-screen rotation debugging
@@ -247,15 +249,15 @@ void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedCompo
 void ACPP_Enemy_Plush::OnEndAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
 	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
 	if (player) {
-		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		/*if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 			enemyController->GetBlackboardComponent()->SetValueAsBool("CanAttackPlayer", false);
-		}
+		}*/
 		StopAttack();
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Stop");
 	}
 }
 
-void ACPP_Enemy_Plush::AttackPlayer() {
+void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
 	FHitResult hit;
 
 	FVector start = GetActorLocation();
@@ -303,7 +305,7 @@ void ACPP_Enemy_Plush::AttackPlayer() {
 			return;
 		}
 
-		GetWorldTimerManager().SetTimer(AttackCooldownTimer, this, &ACPP_Enemy_Plush::AttackPlayer, attackCooldownTime, false);
+		//GetWorldTimerManager().SetTimer(AttackCooldownTimer, this, &ACPP_Enemy_Plush::AttackPlayer, attackCooldownTime, false);
 	}
 
 	// Melee Attack sound
@@ -318,17 +320,30 @@ void ACPP_Enemy_Plush::AttackPlayer() {
 	}
 }
 
-void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
+/*void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "You Are being attacked");
-}
+}*/
 
 void ACPP_Enemy_Plush::StopAttack() {
 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack has stopped");
+	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		enemyController->GetBlackboardComponent()->SetValueAsBool("CanAttackPlayer", false);
+	}
+
 }
 
-void ACPP_Enemy_Plush::Defeat() {
+void ACPP_Enemy_Plush::DefeatEnemy_Implementation() {
 	GetSprite()->SetVisibility(false);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	AttackCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//StopAttack();
+
+	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		enemyController->GetAIPerceptionComponent()->SetSenseEnabled(UAISense_Sight::StaticClass(), false);
+		enemyController->GetBlackboardComponent()->SetValueAsBool("IsDead", true);
+		
+	}
+
 	bHasBeenDefeated = true;
 }
 

@@ -17,6 +17,8 @@ Movement Functions
 #include "GameFramework/CharacterMovementComponent.h" // Used to disable the player's gravity (using the MOVEMENT_MOVE)
 #include "TeleportAbilityComponent.h" // Teleport throw direction (adjust the path if the component lives in a subfolder, e.g. "MyAssets/Abilities/TeleportAbilityComponent.h")
 #include "MyAssets/Characters/ACPP_Enemy_Basic.h"
+#include "MyAssets/Characters/Enemy/CPP_Enemy_Master.h"
+#include "MyAssets/Characters/Enemy/CPP_EnemyActionsInterface.h"
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -398,7 +400,9 @@ void ACPP_PlayerChar::DoSwordAttack() {
 	HitBoxTrace(swordHitBoxSize);
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy hit");
-		enemy->Defeat();
+		if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+			ICPP_EnemyActionsInterface::Execute_DefeatEnemy(enemy);
+		}
 	}
 
 	// Start the timer
@@ -456,7 +460,7 @@ void ACPP_PlayerChar::DoSwordParry() {
 	float RotationZ = GetSprite()->GetRelativeRotation().Yaw;
 
 	float parryKnockbackDirection =
-		FMath::IsNearlyZero(RotationZ) ? parryKnockback : -parryKnockback;
+		FMath::IsNearlyZero(RotationZ) ? parryKnockback : -parryKnockback;	
 
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
@@ -481,7 +485,8 @@ void ACPP_PlayerChar::DoSwordDefense() {
 		);
 	}
 
-	HitBoxTrace(swordDefenseBoxSize);
+	HitBoxTrace(swordDefenseBoxSize);	
+
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack Defended");
 		//enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
@@ -531,7 +536,7 @@ void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
 
 	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
 
-		enemy = Cast<AACPP_Enemy_Basic>(hit.GetActor());
+		enemy = Cast<ACPP_Enemy_Master>(hit.GetActor());
 		
 	}
 }

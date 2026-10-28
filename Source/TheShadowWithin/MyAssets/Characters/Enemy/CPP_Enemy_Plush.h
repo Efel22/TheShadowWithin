@@ -90,7 +90,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Attack")
 	float attackTime = .5f;
 
-	void AttackPlayer();
+	//void AttackPlayer();
 
 	FTimerHandle AttackCooldownTimer;
 
@@ -129,6 +129,8 @@ protected:
 	//~~~Enemy defeat
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bHasBeenDefeated = false;
+
+	void DefeatEnemy_Implementation() override;
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -170,7 +172,7 @@ public:
 
 
 	//~~~Enemy defeat
-	void Defeat();
+	// Defeat();
 
 	//Setters and Getters
 	//Setters
