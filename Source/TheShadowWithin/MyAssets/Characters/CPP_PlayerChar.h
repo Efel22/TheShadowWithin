@@ -16,6 +16,7 @@ Movement Functions
 
 class UCameraComponent;
 class AACPP_Enemy_Basic;
+class ACPP_Enemy_Master;
 
 class UNiagaraSystem; // Required for playing niagara systems
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
@@ -73,7 +74,7 @@ protected:
 	bool bIsDefending = false;
 
 	UPROPERTY()
-	AACPP_Enemy_Basic* enemy;
+	ACPP_Enemy_Master* enemy;
 
 	void HitBoxTrace(float hitBoxSize);
 
