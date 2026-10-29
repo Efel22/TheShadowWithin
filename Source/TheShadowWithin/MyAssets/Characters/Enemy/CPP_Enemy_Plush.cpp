@@ -237,7 +237,7 @@ void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedCompo
 	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
 	if (player) {
 		//GetWorldTimerManager().SetTimer(AttackTimer, this, &ACPP_Enemy_Plush::AttackPlayer, attackTime, false);
-		//bEnemyIsAttacking = true;
+		bEnemyIsAttacking = true;
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "You Are being attacked");
 		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 			enemyController->GetBlackboardComponent()->SetValueAsBool("CanAttackPlayer", true);
