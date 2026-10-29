@@ -16,6 +16,7 @@ class ACPP_TeleportShard;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeleportProjectileArmed, ACPP_TeleportShard*, Projectile);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeleportProjectileImpact, const FHitResult&, Hit, bool, bBouncedOffSurface);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTeleportProjectileHitEnemy, ACPP_TeleportShard*, Projectile, AActor*, Enemy);
 
 UCLASS(Blueprintable)
 class ACPP_TeleportShard : public AActor
@@ -45,6 +46,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Teleport")
 	UProjectileMovementComponent* GetProjectileMovement() const { return ProjectileMovement; }
 
+	UFUNCTION(BlueprintPure, Category = "Teleport")
+	USphereComponent* GetCollisionComponent() const { return Collision; }
+
+	// Used by the trajectory preview so it bounces/lands exactly like the real shard.
+	float GetFloorNormalThreshold() const { return FloorNormalThreshold; }
+	float GetWallBounceSpeedMultiplier() const { return WallBounceSpeedMultiplier; }
+
 	/** Fired the first time it touches any surface. */
 	UPROPERTY(BlueprintAssignable, Category = "Teleport")
 	FOnTeleportProjectileArmed OnArmed;
@@ -52,6 +60,10 @@ public:
 	/** Fired on every surface contact (bounce or landing). */
 	UPROPERTY(BlueprintAssignable, Category = "Teleport")
 	FOnTeleportProjectileImpact OnImpact;
+
+	/** Fired when the shard hits an enemy (any pawn except the thrower, filtered by EnemyTag). */
+	UPROPERTY(BlueprintAssignable, Category = "Teleport")
+	FOnTeleportProjectileHitEnemy OnHitEnemy;
 
 protected:
 	virtual void BeginPlay() override;
@@ -62,6 +74,9 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Teleport", meta = (DisplayName = "On Impact"))
 	void BP_OnImpact(const FHitResult& Hit, bool bBouncedOffSurface);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Teleport", meta = (DisplayName = "On Hit Enemy"))
+	void BP_OnHitEnemy(AActor* Enemy);
 
 	// ---- Components ----
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
@@ -91,12 +106,39 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport")
 	bool bAttachToMovingSurfaces = true;
 
+	// ---- Enemies ----
+	/** Hit enemies while flying (bounce off them and notify the ability component). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies")
+	bool bInteractWithEnemies = true;
+
+	/** Only pawns with this Actor Tag count as enemies. Leave as None to treat every pawn (except the thrower) as an enemy. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies")
+	FName EnemyTag = NAME_None;
+
+	/** Speed kept after bouncing off an enemy. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float EnemyBounceSpeedMultiplier = 0.5f;
+
+	/** Hitting an enemy arms the shard (teleport becomes available). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Enemies")
+	bool bArmOnEnemyHit = true;
+
 private:
 	UFUNCTION()
 	void HandleBounce(const FHitResult& ImpactResult, const FVector& ImpactVelocity);
 
 	UFUNCTION()
 	void HandleStop(const FHitResult& ImpactResult);
+
+	UFUNCTION()
+	void HandleBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/** 2D plane the shard is locked to (zero if not constrained). */
+	FVector PlaneNormalUsed = FVector::ZeroVector;
+
+	/** Enemies already hit this throw (each enemy is hit at most once). */
+	TArray<TWeakObjectPtr<AActor>> HitEnemies;
 
 	void Arm();
 

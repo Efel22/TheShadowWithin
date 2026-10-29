@@ -220,6 +220,12 @@ void ACPP_PlayerChar::Die()
 
 		PC->SetInputMode(InputMode);
 	}
+
+	// Remove any thrown shard and make the teleport ready again
+	if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+	{
+		Teleport->ResetAbility(true);
+	}
 }
 
 // *******************************************************************************
@@ -270,6 +276,12 @@ void ACPP_PlayerChar::Respawn()
 		FInputModeGameOnly InputMode;
 
 		PC->SetInputMode(InputMode);
+	}
+
+	// Remove any thrown shard and make the teleport ready again
+	if (UTeleportAbilityComponent* Teleport = FindComponentByClass<UTeleportAbilityComponent>())
+	{
+		Teleport->ResetAbility(true);
 	}
 }
 
