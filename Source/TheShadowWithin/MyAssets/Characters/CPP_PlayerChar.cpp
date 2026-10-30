@@ -249,6 +249,9 @@ void ACPP_PlayerChar::Respawn()
 	if (UCharacterMovementComponent* CMC = GetCharacterMovement())
 	{
 		CMC->StopMovementImmediately();
+
+		// Restore normal movement after respawning
+		CMC->SetMovementMode(MOVE_Walking);
 	}
 
 	// Move player to respawn point
@@ -265,8 +268,12 @@ void ACPP_PlayerChar::Respawn()
 		UGameplayStatics::GetPlayerController(GetWorld(), 0)
 	);
 
+	// Make sure the player is no longer holding a vine
 	if (PC)
 	{
+		// Player is no holding vine
+		PC->SetIsHoldingVine(false);
+
 		// Make the mouse cursor visible
 		PC->bShowMouseCursor = false;
 
@@ -560,7 +567,12 @@ void ACPP_PlayerChar::Hurt()
 	if (!PlayerController) return;
 
 	// If during a hurt event, the player was holding onto a vine, let go of it
-	if (PlayerController->GetIsHoldingVine()) PlayerController->SetIsHoldingVine(false);
+	// If the player is holding onto a vine, release it and restore gravity
+	if (PlayerController->GetIsHoldingVine())
+	{
+		PlayerController->SetIsHoldingVine(false);
+		StopClimbingVine();
+	}
 	
 	// Decrease amount of lives
 	amountOfLives = FMath::Max(0, amountOfLives - 1);

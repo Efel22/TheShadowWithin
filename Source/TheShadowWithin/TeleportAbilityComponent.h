@@ -314,6 +314,7 @@ private:
 	void SetState(ETeleportAbilityState NewState);
 	void StartAiming();
 	void AdvanceAim();
+	void PlayAimChangedSound() const; // Plays the configured shard sound when the aim pose changes
 	void ThrowProjectile();
 	void TryTeleport();
 	void StartCooldown();

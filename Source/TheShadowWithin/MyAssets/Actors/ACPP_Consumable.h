@@ -12,6 +12,15 @@ class UNiagaraSystem; // Required for playing niagara systems
 class UNiagaraComponent; // Required for niagara particle components
 class USoundBase; // Required for sound base
 
+// Defines the behavior of this consumable actor
+UENUM(BlueprintType)
+enum class EConsumableType : uint8
+{
+	ActivatesTeleportation, // Activates the player's ability to teleport
+	RemovesTeleportation,   // Removes the player's ability to teleport
+	Generic                 // Does nothing
+};
+
 UCLASS()
 class THESHADOWWITHIN_API ACPP_Consumable 
 	: public AActor, public ICollectableInterface
@@ -35,6 +44,10 @@ protected:
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
+
+	// Defines behavior by the consumable whenever its collected 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components | Behavior")
+	EConsumableType ConsumableType = EConsumableType::Generic; // Does nothing by default 
 
 	// Sprite displayed in the world
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Visual")
