@@ -1,3 +1,4 @@
+
 // CPP_TeleportShard.h
 // Throwable "ender pearl" style actor. It becomes ARMED only after touching a surface.
 //  - Walls / ceilings: reflects off the surface (angle in = angle out), then keeps flying (armed).
@@ -12,6 +13,10 @@
 
 class USphereComponent;
 class UProjectileMovementComponent;
+class UPaperSpriteComponent;
+class UNiagaraComponent;
+class UNiagaraSystem;
+class USoundBase;
 class ACPP_TeleportShard;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTeleportProjectileArmed, ACPP_TeleportShard*, Projectile);
@@ -65,8 +70,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Teleport")
 	FOnTeleportProjectileHitEnemy OnHitEnemy;
 
+	// Get the sounds and particles used by the teleport ability component
+	USoundBase* GetThrowSound() const { return Sound_Throw; }
+	USoundBase* GetAimChangedSound() const { return Sound_AimChanged; }
+	USoundBase* GetTeleportSound() const { return Sound_Teleport; }
+	UNiagaraSystem* GetTeleportParticles() const { return TeleportParticles; }
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 
 	// ---- Blueprint hooks for VFX / SFX in your BP child ----
 	UFUNCTION(BlueprintImplementableEvent, Category = "Teleport", meta = (DisplayName = "On Armed"))
@@ -84,6 +96,88 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
+
+	// Sprite displayed for the teleport shard
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UPaperSpriteComponent> SpriteComponent;
+
+	// Niagara component that follows the shard while it is flying
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UNiagaraComponent> FlyingParticlesComponent;
+
+	// Niagara component that plays while the shard is resting on the ground
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UNiagaraComponent> LandedParticlesComponent;
+
+	// ***************************************************************************************************************
+	//                                                  SOUNDS
+	// ***************************************************************************************************************
+
+	// Sound that plays when the shard is thrown
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Throw = nullptr;
+
+	// Sound that plays when the aiming angle changes
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_AimChanged = nullptr;
+
+	// Sound that plays when the shard hits a wall or ceiling
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Impact = nullptr;
+
+	// Sound that plays when the shard lands on the ground
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Landing = nullptr;
+
+	// Sound that plays when the shard hits an enemy
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_HitEnemy = nullptr;
+
+	// Sound that plays when the player uses the shard to teleport
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sounds")
+	USoundBase* Sound_Teleport = nullptr;
+
+	// ***************************************************************************************************************
+	//                                                  PARTICLES
+	// ***************************************************************************************************************
+
+	// Particles that continuously follow the shard while it is flying
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	UNiagaraSystem* FlyingParticles = nullptr;
+
+	// Particles that continuously appear when the shard has landed
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	UNiagaraSystem* LandedParticles = nullptr;
+
+	// Particles that play whenever the shard collides with something
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	UNiagaraSystem* ImpactParticles = nullptr;
+
+	// Particles that play when the shard is used to teleport
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
+	UNiagaraSystem* TeleportParticles = nullptr;
+
+	// ***************************************************************************************************************
+	//                                                  SPRITE ROTATION
+	// ***************************************************************************************************************
+
+	// Should the sprite tilt slightly while flying?
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleport|Visual")
+	bool bTiltWhileFlying = true;
+
+	// Maximum angle of the sprite's tilt
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleport|Visual")
+	float TiltAmount = 12.f;
+
+	// Speed of the tilting movement
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleport|Visual")
+	float TiltSpeed = 5.f;
+
+	// Original pitch of the sprite so it can be restored after landing
+	float OriginalSpritePitch = 0.f;
+
+	// Time used to calculate the sprite's tilting movement
+	float TiltTime = 0.f;
 
 	// ---- Tuning ----
 	/** Surface normal Z >= this counts as a floor (0.7 ~= 45 degree slope). */
@@ -141,6 +235,12 @@ private:
 	TArray<TWeakObjectPtr<AActor>> HitEnemies;
 
 	void Arm();
+
+	// Play an impact sound and spawn particles at the collision location
+	void PlayImpactEffects(const FVector& ImpactLocation, USoundBase* Sound);
+
+	// Stop the flying particles and restore the sprite's original rotation
+	void StopFlyingEffects();
 
 	bool bArmed = false;
 	bool bLanded = false;
