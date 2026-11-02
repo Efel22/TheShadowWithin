@@ -87,6 +87,7 @@ void ACPP_Enemy_Plush::BeginPlay()
 	UpdateSpriteRotation();
 
 	// Start the enemy's jumping timer
+	/*
 	GetWorldTimerManager().SetTimer(
 		JumpTimer,
 		this,
@@ -94,6 +95,7 @@ void ACPP_Enemy_Plush::BeginPlay()
 		jumpTime,
 		true
 	);
+	*/
 }
 
 // *******************************************************************************
@@ -168,6 +170,9 @@ void ACPP_Enemy_Plush::Tick(float DeltaTime)
 		}
 	}
 	*/
+
+	if (GetCharacterMovement()->IsMovingOnGround()) { canJump = true; }
+
 }
 
 
@@ -182,7 +187,7 @@ void ACPP_Enemy_Plush::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 void ACPP_Enemy_Plush::OnBeginJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
 	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
 	if (level) {
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Touching wall");
+		//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Touching wall");
 		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 			enemyController->GetBlackboardComponent()->SetValueAsBool("CanClimb", true);
 		}
@@ -193,7 +198,7 @@ void ACPP_Enemy_Plush::OnBeginJumpOverlap(UPrimitiveComponent* OverlappedCompone
 void ACPP_Enemy_Plush::OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
 	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
 	if (level) {
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Leaving wall");
+		//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Leaving wall");
 		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 			enemyController->GetBlackboardComponent()->SetValueAsBool("CanClimb", false);
 		}
@@ -201,6 +206,25 @@ void ACPP_Enemy_Plush::OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent
 	}
 }
 
+void ACPP_Enemy_Plush::EnemyJump_Implementation() {
+	canJump = false;
+	Jump();
+	UCharacterMovementComponent* CMC = GetCharacterMovement();
+	if (!CMC || CMC->IsFalling()) return;
+
+	// Play Sound
+	if (Sound_Jump)
+	{
+		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+			Sound_Jump,
+			GetActorLocation(),
+			1.f,  // Volume
+			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
+		);
+	}
+}
+
+/*
 //After set amount of time passes the enemy jumps based on is the player has the higher ground
 void ACPP_Enemy_Plush::EnemyJump() {
 
@@ -232,6 +256,8 @@ void ACPP_Enemy_Plush::EnemyJump() {
 		);
 	}
 }
+*/
+
 
 void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
 	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
@@ -400,4 +426,6 @@ void ACPP_Enemy_Plush::Hurt()
 	}
 }
 
-
+bool ACPP_Enemy_Plush::GetEnemyCanJump() {
+	return canJump;
+}

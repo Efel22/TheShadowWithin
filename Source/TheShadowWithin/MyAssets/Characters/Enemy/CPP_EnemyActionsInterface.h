@@ -24,7 +24,7 @@ class THESHADOWWITHIN_API ICPP_EnemyActionsInterface
 public:
 
 	UFUNCTION(BlueprintNativeEvent)
-	void LookForPlayer();
+	void EnemyJump();
 
 	UFUNCTION(BlueprintNativeEvent)
 	void AttackPlayer();

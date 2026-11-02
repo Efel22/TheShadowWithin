@@ -55,6 +55,10 @@ protected:
 	UFUNCTION()
 	void OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+	bool canJump = true;
+
+	void EnemyJump_Implementation() override;
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//~~~Enemy Attack
 	//Attack Collider
@@ -152,7 +156,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 	float jumpTime = 5.f;
 
-	void EnemyJump();
+	//void EnemyJump();
 
 	
 
@@ -180,5 +184,7 @@ public:
 
 	//Getters
 	bool GetEnemyIsAttacking();
+
+	bool GetEnemyCanJump();
 
 };
