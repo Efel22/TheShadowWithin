@@ -24,12 +24,12 @@
 ACPP_Enemy_Plush::ACPP_Enemy_Plush()
 {
 	AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collider"));
-	AttackCollider->SetupAttachment(RootComponent);
+	AttackCollider->SetupAttachment(GetSprite());
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginAttackOverlap);
 	AttackCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndAttackOverlap);
 
 	JumpCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Jump Collider"));
-	JumpCollider->SetupAttachment(RootComponent);
+	JumpCollider->SetupAttachment(GetSprite());
 	JumpCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginJumpOverlap);
 	JumpCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndJumpOverlap);
 
@@ -86,6 +86,8 @@ void ACPP_Enemy_Plush::BeginPlay()
 	// Set the sprite's initial facing direction
 	UpdateSpriteRotation();
 
+	startingLocation = GetActorLocation();
+
 	// Start the enemy's jumping timer
 	/*
 	GetWorldTimerManager().SetTimer(
@@ -109,67 +111,7 @@ void ACPP_Enemy_Plush::Tick(float DeltaTime)
 	// Safety Check
 	if (!PlayerCharRef) return;
 
-	/*
-	//If the enemy has been defeated by the player make it dissapear and stop following the player
-	if (!bHasBeenDefeated) {
-
-		// How far is it from the player?
-		float distance = FVector::Dist(PlayerCharRef->GetActorLocation(), GetActorLocation());
-
-		// Is it within range?
-		if (distance <= FDetectionRange)
-		{
-			// Where should this enemy face?
-			// Based on the two characters positions (player and this enemy's) get its sign as it determines the location
-			// NOTE: This is based on the asumption that 'X' axis represents "right" and "left"!!!!
-
-			// Get the horizontal distance between the player and enemy
-			float DirectionX = PlayerCharRef->GetActorLocation().X - GetActorLocation().X;
-
-			// Update the enemy's facing direction
-			// **NOTE: Prevents changing direction if the player is directly above/below
-			if (!FMath::IsNearlyZero(DirectionX, 1.f))
-			{
-				FacingDirection = DirectionX > 0.f ? 1 : -1;
-			}
-
-			// Prevents enemy from disappearing visually
-			// ?: Rotates ONLY the sprite, without using negative scale
-			UpdateSpriteRotation();
-
-			// Moves the enemy in the 'x' axis in the direction that faces the player
-			AddMovementInput(FVector(1.f, 0.f, 0.f), FacingDirection);
-
-			
-
-		}
-				
-
-		
-		// ***************************
-		/*      ROTATION DEBUG      */
-		// ***************************
-		
-		/*
-
-		// Display the enemy's current facing and rotation
-		// ?: Useful for detecting if another system is overriding the sprite's rotation
-		if (bDebugSpriteRotation && GEngine && GetSprite())
-		{
-			GEngine->AddOnScreenDebugMessage(
-				static_cast<uint64>(GetUniqueID()),
-				0.f,
-				FColor::Yellow,
-				FString::Printf(
-					TEXT("Enemy Facing: %d | Sprite Yaw: %.1f | Actor Yaw: %.1f"),
-					FacingDirection,
-					GetSprite()->GetRelativeRotation().Yaw,
-					GetActorRotation().Yaw
-				)
-			);
-		}
-	}
-	*/
+	
 
 	if (GetCharacterMovement()->IsMovingOnGround()) { canJump = true; }
 
@@ -225,39 +167,7 @@ void ACPP_Enemy_Plush::EnemyJump_Implementation() {
 	}
 }
 
-/*
-//After set amount of time passes the enemy jumps based on is the player has the higher ground
-void ACPP_Enemy_Plush::EnemyJump() {
 
-	// Safety Check
-	// ?: Prevents jumping if the player reference is invalid or the enemy has been defeated
-	if (!PlayerCharRef || bHasBeenDefeated) return;
-
-	int verticalDirection = FMath::Sign(
-		PlayerCharRef->GetActorLocation().Z - GetActorLocation().Z
-	);
-
-	// Only jump if the player is above the enemy
-	// **NOTE: Prevents unnecessary jump attempts while already falling
-	if (verticalDirection > 0 && !GetCharacterMovement()->IsFalling()) {
-		Jump();
-	}
-
-	UCharacterMovementComponent* CMC = GetCharacterMovement();
-	if (!CMC || CMC->IsFalling()) return;
-
-	// Play Sound
-	if (Sound_Jump)
-	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
-			Sound_Jump,
-			GetActorLocation(),
-			1.f,  // Volume
-			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
-		);
-	}
-}
-*/
 
 
 void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
@@ -322,7 +232,7 @@ void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
 		ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(hit.GetActor());
 		if (player) {
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attacking Player");
-			player->LaunchCharacter(FVector(knockbackDirection, 0, 0), true, false);
+			player->LaunchCharacter(FVector(knockbackDirection, 0, 0), false, false);
 			bEnemyIsAttacking = false;
 			if (!player->GetIsPlayerDefending()) {
 				player->Hurt();
@@ -347,9 +257,7 @@ void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
 	}
 }
 
-/*void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "You Are being attacked");
-}*/
+
 
 void ACPP_Enemy_Plush::StopAttack() {
 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack has stopped");
@@ -374,6 +282,16 @@ void ACPP_Enemy_Plush::DefeatEnemy_Implementation() {
 	bHasBeenDefeated = true;
 }
 
+
+//~~~Enemy Return To Patrol when lost
+void ACPP_Enemy_Plush::EnemyIsLost_Implementation() {
+	GetWorldTimerManager().SetTimer(ReturnToOriginTimer, this, &ACPP_Enemy_Plush::ReturnToOrigin, returnToOriginTime, false);
+}
+
+void ACPP_Enemy_Plush::ReturnToOrigin() {
+	SetActorLocation(startingLocation);
+	bEnemyIsLost = false;
+}
 
 // *******************************************************************************
 //                                 HURT
@@ -430,3 +348,12 @@ void ACPP_Enemy_Plush::Hurt()
 bool ACPP_Enemy_Plush::GetEnemyCanJump() {
 	return canJump;
 }
+
+/*void ACPP_Enemy_Plush::SetEnemyIsLost(bool EIL) {
+	bEnemyIsLost = EIL;
+}
+
+bool ACPP_Enemy_Plush::GetEnemyIsLost() {
+	return bEnemyIsLost;
+}*/
+

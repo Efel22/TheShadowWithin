@@ -9,7 +9,7 @@
 
 UCPP_ClimbWall_BTTask::UCPP_ClimbWall_BTTask(FObjectInitializer const& ObjectInitializer) : UBTTask_BlackboardBase(ObjectInitializer)
 {
-	NodeName = TEXT("Move Enemy");
+	NodeName = TEXT("Enemy Climb");
 	bNotifyTick = true;
 }
 

@@ -44,6 +44,22 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+
+	//~~~Enemy Patrol
+	FTimerHandle ReturnToOriginTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Patrol")
+	float returnToOriginTime = 2.f;
+
+	void ReturnToOrigin();
+
+	FVector startingLocation;
+
+	//bool bEnemyIsLost = false;
+
+	void EnemyIsLost_Implementation() override;
+
+
 	//~~~Enemy Jump
 	//~~~Jump Collider
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -79,7 +95,7 @@ protected:
 	float attackHitBox = 300.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
-	float knockback = 600.f;
+	float knockback = 2000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
 	bool bEnemyIsAttacking = false;
@@ -174,6 +190,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	
 
 	//~~~Enemy defeat
 	// Defeat();
@@ -182,9 +199,14 @@ public:
 	//Setters
 	void SetEnemyisAttacking(bool EA);
 
+	//void SetEnemyIsLost(bool EIL);
+
+
 	//Getters
 	bool GetEnemyIsAttacking();
 
 	bool GetEnemyCanJump();
+
+	//bool GetEnemyIsLost();
 
 };

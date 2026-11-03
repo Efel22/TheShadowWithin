@@ -31,4 +31,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void DefeatEnemy();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void EnemyIsLost();
 };
