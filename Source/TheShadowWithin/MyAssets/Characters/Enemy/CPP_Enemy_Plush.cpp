@@ -208,7 +208,8 @@ void ACPP_Enemy_Plush::OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent
 
 void ACPP_Enemy_Plush::EnemyJump_Implementation() {
 	canJump = false;
-	Jump();
+	LaunchCharacter(FVector(0, 0, GetCharacterMovement()->JumpZVelocity), false, true);
+	//Jump();
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	if (!CMC || CMC->IsFalling()) return;
 
