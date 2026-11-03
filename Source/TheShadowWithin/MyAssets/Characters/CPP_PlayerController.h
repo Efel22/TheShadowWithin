@@ -5,7 +5,6 @@
 * Movement Functions
 */
 
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -15,7 +14,7 @@
 
 class ACPP_PlayerChar;
 /**
- * 
+ *
  */
 UCLASS()
 class THESHADOWWITHIN_API ACPP_PlayerController : public APlayerController

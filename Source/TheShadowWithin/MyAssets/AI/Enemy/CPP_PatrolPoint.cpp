@@ -13,6 +13,18 @@ ACPP_PatrolPoint::ACPP_PatrolPoint()
 
 //Gets the index for the patrolling ai
 FVector ACPP_PatrolPoint::GetOnePatrolPoint(int const index) const {
+	
+	// Check if the index is valid
+	if (!PatrolPoints.IsValidIndex(index))
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("CPP_PatrolPoint: Invalid patrol index %d. Array contains %d points."),
+			index,
+			PatrolPoints.Num());
+
+		return FVector::ZeroVector;
+	}
+
 	return PatrolPoints[index];
 }
 

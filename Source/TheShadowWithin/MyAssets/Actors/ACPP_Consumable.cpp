@@ -4,6 +4,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 #include "MyAssets/GM/CPP_TSWGameMode.h"
+#include "TeleportAbilityComponent.h" // Required to activate/deactivate the component
 #include "Kismet/GameplayStatics.h" // Required for play_sound usage
 #include "NiagaraSystem.h" // Required for niagara system usage
 #include "NiagaraComponent.h" // Required for niagara component
@@ -194,6 +195,39 @@ void ACPP_Consumable::Collect(ACPP_PlayerChar* Player)
 			GetActorLocation()
 		);
 	}
+
+	// Get the teleport component and store it
+	UTeleportAbilityComponent* TP_Comp = Player->GetComponentByClass<UTeleportAbilityComponent>();
+
+	// CHECK IF VALID
+	if (TP_Comp) {
+
+		// Debug
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("TeleportComponent: Is NOT null"));
+
+		// Consumable behavior switch
+		switch (ConsumableType)
+		{
+
+		case EConsumableType::ActivatesTeleportation:
+			TP_Comp->SetUnlocked(true);
+			break;
+
+		case EConsumableType::RemovesTeleportation:
+			TP_Comp->SetUnlocked(false);
+			break;
+
+		// EConsumableType::Generic: //
+		default:
+			break;
+		}
+
+	}
+	else {
+		// Debug
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("TeleportComponent: Is NULL"));
+	}
+
 }
 
 bool ACPP_Consumable::RequiresInput() const

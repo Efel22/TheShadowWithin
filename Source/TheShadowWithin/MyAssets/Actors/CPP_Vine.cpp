@@ -6,6 +6,7 @@
 #include "PaperSpriteComponent.h"
 #include "Components/BoxComponent.h"
 #include "Engine/Engine.h"
+#include "MyAssets/Characters/CPP_PlayerChar.h" // 
 #include "Components/ArrowComponent.h" // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 #include "NiagaraFunctionLibrary.h" // Required for spawning niagara systems
 #include "Kismet/GameplayStatics.h" // Required for play_sound usage
@@ -76,10 +77,12 @@ void ACPP_Vine::OnDetectionBoxBeginOverlap(
 )
 {
 	
+	// Make sure the overlapping actor is the player
+	ACPP_PlayerChar* Player = Cast<ACPP_PlayerChar>(OtherActor);
+	if (!Player) return;
+
 	// Get the player controller
-	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(
-		UGameplayStatics::GetPlayerController(GetWorld(), 0)
-	);
+	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(Player->GetController());
 	// Safety check
 	if (!PC) return;
 
@@ -124,10 +127,13 @@ void ACPP_Vine::OnDetectionBoxEndOverlap(
 )
 {
 
+	// Make sure the actor leaving the vine is the player
+	ACPP_PlayerChar* Player = Cast<ACPP_PlayerChar>(OtherActor);
+	if (!Player) return;
+
 	// Get the player controller
-	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(
-		UGameplayStatics::GetPlayerController(GetWorld(), 0)
-	);
+	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(Player->GetController());
+
 	// Safety check
 	if (!PC) return;
 

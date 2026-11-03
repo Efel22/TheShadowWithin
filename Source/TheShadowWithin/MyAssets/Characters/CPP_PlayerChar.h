@@ -4,25 +4,24 @@
 Movement Functions
 */
 
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "PaperCharacter.h"
 #include "PaperZDCharacter.h"
 #include "MyAssets/Sounds/SoundData.h"
-#include "MyAssets/Characters/CPP_PlayerController.h" 
+#include "MyAssets/Characters/CPP_PlayerController.h"
 #include "CPP_PlayerChar.generated.h"
 
 class UCameraComponent;
 class AACPP_Enemy_Basic;
 class ACPP_Enemy_Master;
+class UPaperFlipbookComponent; // Required for the sword attack overlay
 
 class UNiagaraSystem; // Required for playing niagara systems
 class UArrowComponent; // Used to determine where the "center" of the vine is (used in player's sprite flipping)
 class USoundBase; // Used to declare sound properties
 class UUserWidget; // Required for widgets
-
 
 // ONLIVESCHANGED EVENT DISPATCHER
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam( // ONE PARAM:
@@ -50,6 +49,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaTime) override;
+
 	//~~~Properties
 	// Player camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character|Camera", meta = (AllowPrivateAccess = "true"))
@@ -59,6 +60,15 @@ protected:
 	// Camera Movements
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|CameraMovements")
 	float orthoWidth = 7000;
+
+	// Sword flipbook displayed over the player only while attacking.
+	// Assign its Source Flipbook in the Blueprint's Components panel.
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Sword")
+	UPaperFlipbookComponent* SwordAttackFlipbookComponent;
+
+	// Sword's fixed position on the WORLD Y axis
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character|Sword Attack")
+	float SwordWorldY = 0.1f;
 
 	//	Sword atributes
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Sword Attack")
@@ -82,13 +92,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character|Jump")
 	float jumpCutOff = 0.f;
 
-
 	// Used to determine where the "center" of the vine is (used in player's sprite flipping)
 	// WHY?: A component is really easy to move around and you an use getComponentLocation(), which is, in my opinion, better
-	//       than having an FVector. Why'd do this now and not in EndlessVoid.h? cuz i found out about this NOW :/ 
+	//       than having an FVector. Why'd do this now and not in EndlessVoid.h? cuz i found out about this NOW :/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Other")
 	UArrowComponent* CenterOfPlayerComponent;
-
 
 	// ***************************************************************************************************************
 	//                                                  SOUNDS
@@ -119,16 +127,14 @@ protected:
 	//                                                  PARTICLES
 	// ***************************************************************************************************************
 
-
-	// Particles that play when the vine is grabbed and let go of 
+	// Particles that play when the vine is grabbed and let go of
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Particles")
 	UNiagaraSystem* VineInteractParticles;
-
 
 	// ***************************************************************************************************************
 	//                                                  References
 	// ***************************************************************************************************************
-	ACPP_PlayerController* PlayerController; 
+	ACPP_PlayerController* PlayerController;
 
 public:
 	//~~~Functions
@@ -170,13 +176,17 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoSwordAttack();
-	void EndSwordAttack() { bIsSwordAttacking = false; }
+
+	// Automatically called when the sword flipbook finishes
+	UFUNCTION()
+	void EndSwordAttack();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsSwordAttacking = false;
 
+	// Kept for compatibility with old Blueprint properties; sword timing now follows the flipbook.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	float attackCooldownInterval = .25f; 
+	float attackCooldownInterval = .25f;
 	FTimerHandle AttackTimer;
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
@@ -207,10 +217,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health| Inmunity")
 	float healInmunityInterval = 0.25f;
 
-	// HURT LOGIC 
-	// Hurt         -> Calls EndHurt() using HurtTimer, 
-	// EndHurt()    -> Restores damage vulnerability, 
-	// bIsBeingHurt -> True when Hurt() is called, False when EndHurt() is called, 
+	// HURT LOGIC
+	// Hurt         -> Calls EndHurt() using HurtTimer,
+	// EndHurt()    -> Restores damage vulnerability,
+	// bIsBeingHurt -> True when Hurt() is called, False when EndHurt() is called,
 	//	               also used by the PaperZD Anim BP to determine whether or not to play the HURT animation
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void Hurt();
@@ -221,9 +231,9 @@ public:
 	bool bIsBeingHurt = false;
 	// ***********************************************************************************************************
 
-	// HEAL LOGIC 
-	// Heal           -> Calls EndHeal() using HealTimer, 
-	// EndHeal()      -> Restores healing vulnerability, 
+	// HEAL LOGIC
+	// Heal           -> Calls EndHeal() using HealTimer,
+	// EndHeal()      -> Restores healing vulnerability,
 	// bIsBeingHealed -> True when Heal() is called, False when EndHeal() is called
 	//	                 also used by the PaperZD Anim BP to determine whether or not to play the HEAL animation
 	UFUNCTION(BlueprintCallable, Category = "Health")
@@ -257,7 +267,7 @@ public:
 
 	//~~~RESPAWN LOGIC
 
-	UFUNCTION(BlueprintCallable, Category="Respawn")
+	UFUNCTION(BlueprintCallable, Category = "Respawn")
 	void Respawn();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Respawn|Location")
@@ -269,8 +279,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Respawn")
 	FVector GetRespawnPoint() { return RespawnLocation; }
 
-
 	//Setters and getters
 	bool GetIsPlayerDefending();
-
 };

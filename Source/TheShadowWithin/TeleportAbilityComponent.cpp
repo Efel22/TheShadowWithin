@@ -16,6 +16,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h" // Required for teleport particles
 
 // ------------------------------------------------------------------ Construction / destruction
 
@@ -79,7 +80,7 @@ void UTeleportAbilityComponent::OnTeleportInputPressed()
 {
 	switch (State)
 	{
-	// Start aiming if the ability is ready and unlocked. Otherwise, deny the input.
+		// Start aiming if the ability is ready and unlocked. Otherwise, deny the input.
 	case ETeleportAbilityState::Ready:
 		if (bUnlocked)
 		{
@@ -91,11 +92,11 @@ void UTeleportAbilityComponent::OnTeleportInputPressed()
 		}
 		break;
 
-	// If aiming, throw the shard immediately (no need to wait for release).
+		// If aiming, throw the shard immediately (no need to wait for release).
 	case ETeleportAbilityState::Armed:
 		TryTeleport();
 		break;
-	
+
 	case ETeleportAbilityState::InFlight:  // hasn't touched a surface yet
 	case ETeleportAbilityState::Cooldown:
 		OnTeleportDenied.Broadcast();
@@ -300,6 +301,7 @@ void UTeleportAbilityComponent::StartAiming()
 	SetState(ETeleportAbilityState::Aiming);
 	OnAimStarted.Broadcast();
 	OnAimIndexChanged.Broadcast(AimIndex);
+	PlayAimChangedSound();
 
 	// If there are multiple angles, start cycling through them automatically.
 	if (ThrowAnglesDegrees.Num() > 1)
@@ -318,6 +320,18 @@ void UTeleportAbilityComponent::StartAiming()
 
 
 // ------------------------------------------------------------------ Aim cycling
+
+// Play a sound when the aiming angle changes, using the assigned projectile Blueprint defaults.
+void UTeleportAbilityComponent::PlayAimChangedSound() const
+{
+	if (!ProjectileClass) return;
+
+	const ACPP_TeleportShard* ShardDefaults = ProjectileClass->GetDefaultObject<ACPP_TeleportShard>();
+	if (ShardDefaults && ShardDefaults->GetAimChangedSound())
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), ShardDefaults->GetAimChangedSound());
+	}
+}
 
 void UTeleportAbilityComponent::AdvanceAim()
 {
@@ -345,6 +359,7 @@ void UTeleportAbilityComponent::AdvanceAim()
 	}
 
 	OnAimIndexChanged.Broadcast(AimIndex);
+	PlayAimChangedSound();
 
 	// If the player is still aiming and the trajectory preview is enabled, update the preview immediately to reflect the new angle.
 	if (State == ETeleportAbilityState::Aiming && bShowTrajectoryPreview)
@@ -442,6 +457,12 @@ void UTeleportAbilityComponent::ThrowProjectile()
 	Projectile->FinishSpawning(SpawnTransform);
 
 	OnThrown.Broadcast(AimIndex, Projectile);
+
+	// Play the throw sound after spawning the shard
+	if (Projectile->GetThrowSound())
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), Projectile->GetThrowSound());
+	}
 }
 
 
@@ -802,6 +823,17 @@ void UTeleportAbilityComponent::TryTeleport()
 			MoveComp->Velocity = Kept;
 			MoveComp->UpdateComponentVelocity();
 		}
+	}
+
+	// Play the teleport sound and spawn particles at both positions before destroying the shard.
+	if (Projectile->GetTeleportSound())
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), Projectile->GetTeleportSound());
+	}
+	if (UNiagaraSystem* TeleportFX = Projectile->GetTeleportParticles())
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), TeleportFX, From);
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), TeleportFX, OwnerActor->GetActorLocation());
 	}
 
 	// Destroy the projectile and reset the active reference, then broadcast the OnTeleported event and start the cooldown. 

@@ -32,6 +32,10 @@ ACPP_EndlessVoid::ACPP_EndlessVoid()
 	DetectionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	DetectionBox->SetGenerateOverlapEvents(true);
 
+	// Niagara Particles Component
+	Pit_OnGoingParticlesComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Ongoing Particles Component"));
+	Pit_OnGoingParticlesComp->SetupAttachment(RootComponent);
+
 	// Bind
 	if (DetectionBox) DetectionBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_EndlessVoid::OnDetectionBoxBeginOverlap);
 
@@ -80,7 +84,7 @@ void ACPP_EndlessVoid::OnDetectionBoxBeginOverlap(
 	case EFloorType::Deadly:
 
 		Player->SetActorLocation(Player->GetRespawnPoint());
-
+		Player->Hurt(); // hurts the player
 		break;
 
 	/* TELEPORTS PLAYER TO SPECIFIED POSITION */

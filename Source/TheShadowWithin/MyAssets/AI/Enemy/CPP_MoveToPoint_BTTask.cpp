@@ -2,6 +2,7 @@
 
 
 #include "MyAssets/AI/Enemy/CPP_MoveToPoint_BTTask.h"
+#include "MyAssets/AI/Enemy/CPP_PatrolPoint.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "MyAssets/Characters/Enemy/CPP_EnemyAiController.h"
 #include "MyAssets/Characters/Enemy/CPP_Enemy_Master.h"
@@ -26,9 +27,41 @@ EBTNodeResult::Type UCPP_MoveToPoint_BTTask::ExecuteTask(UBehaviorTreeComponent&
 			if (auto* enemy = Cast<ACPP_Enemy_Master>(enemyController->GetPawn()))
 			{
 				//Patrol point
-				auto const Point = enemy->GetPatrolPoint()->GetOnePatrolPoint(index);
+				auto* const PatrolPoint = enemy->GetPatrolPoint();
 
-				auto const GlobalPoint = enemy->GetPatrolPoint()->GetActorTransform().TransformPosition(Point);
+				// Make sure the patrol point actor exists
+				if (!IsValid(PatrolPoint))
+				{
+					UE_LOG(LogTemp, Warning,
+						TEXT("MoveToPoint: %s has no Patrol Point assigned!"),
+						*enemy->GetName());
+
+					return EBTNodeResult::Failed;
+				}
+
+				// Make sure there are patrol points available
+				if (PatrolPoint->Num() <= 0)
+				{
+					UE_LOG(LogTemp, Warning,
+						TEXT("MoveToPoint: Patrol Point array is empty!"));
+
+					return EBTNodeResult::Failed;
+				}
+
+				// Make sure the index is within the array bounds
+				if (index < 0 || index >= PatrolPoint->Num())
+				{
+					UE_LOG(LogTemp, Warning,
+						TEXT("MoveToPoint: Invalid patrol index %d (Array size: %d)"),
+						index,
+						PatrolPoint->Num());
+
+					return EBTNodeResult::Failed;
+				}
+
+				auto const Point = PatrolPoint->GetOnePatrolPoint(index);
+
+				auto const GlobalPoint = PatrolPoint->GetActorTransform().TransformPosition(Point);
 				bc->SetValueAsVector(PatrolPathVectorKey.SelectedKeyName, GlobalPoint);
 
 				float DirectionX = GlobalPoint.X - enemy->GetActorLocation().X;

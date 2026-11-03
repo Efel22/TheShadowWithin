@@ -1,16 +1,23 @@
+
 // CPP_TeleportShard.cpp
 
 #include "CPP_TeleportShard.h"
 
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "PaperSpriteComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 ACPP_TeleportShard::ACPP_TeleportShard()
 {
 	// Set this actor to call Tick() every frame.
 	// You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	// Tick is disabled by default and only enabled while the shard is flying.
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 
 	// detects enemies without ever blocking anyone
 	//simply creating a sphere collision component and setting it to overlap pawns, while blocking everything else
@@ -19,7 +26,7 @@ ACPP_TeleportShard::ACPP_TeleportShard()
 	Collision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Collision->SetCollisionObjectType(ECC_WorldDynamic);
 	Collision->SetCollisionResponseToAllChannels(ECR_Block);
-	Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);      
+	Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	Collision->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	Collision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Ignore);
 	Collision->SetCanEverAffectNavigation(false);
@@ -27,12 +34,31 @@ ACPP_TeleportShard::ACPP_TeleportShard()
 	Collision->SetGenerateOverlapEvents(true);
 	RootComponent = Collision;
 
+	// ***************************************************************************************************************
+	//                                                  VISUAL COMPONENTS
+	// ***************************************************************************************************************
+
+	// Create the shard's sprite
+	SpriteComponent = CreateDefaultSubobject<UPaperSpriteComponent>(TEXT("Shard Sprite"));
+	SpriteComponent->SetupAttachment(Collision);
+	SpriteComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Create the flying particles component
+	FlyingParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Flying Particles"));
+	FlyingParticlesComponent->SetupAttachment(Collision);
+	FlyingParticlesComponent->SetAutoActivate(false);
+
+	// Create the landed particles component
+	LandedParticlesComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Landed Particles"));
+	LandedParticlesComponent->SetupAttachment(Collision);
+	LandedParticlesComponent->SetAutoActivate(false);
+
 	// projectile movement component handles the physics simulation and bounces
 	// we override the bounce result in HandleBounce to control the speed and angle of the bounce
 	// we also use HandleStop to detect when it has landed on a floor
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovement->UpdatedComponent = Collision;
-	ProjectileMovement->InitialSpeed = 0.f;               
+	ProjectileMovement->InitialSpeed = 0.f;
 	ProjectileMovement->MaxSpeed = 0.f;                   // no cap
 	ProjectileMovement->bInitialVelocityInLocalSpace = false;
 	ProjectileMovement->bRotationFollowsVelocity = false; // keep the sprite facing the camera
@@ -43,7 +69,6 @@ ACPP_TeleportShard::ACPP_TeleportShard()
 	ProjectileMovement->bForceSubStepping = true;         // more accurate bounces at high speed
 	ProjectileMovement->MaxSimulationTimeStep = 0.016f;
 }
-
 
 // Called when the game starts or when spawned, or when BeginPlay is called after spawning with FinishSpawning
 // This is where we bind the bounce and stop events, and set up the collision overlap for enemies if needed.
@@ -68,6 +93,47 @@ void ACPP_TeleportShard::BeginPlay()
 	{
 		SetLifeSpan(UnarmedLifetime);
 	}
+
+	// ***************************************************************************************************************
+	//                                                  VISUALS
+	// ***************************************************************************************************************
+
+	// Store the original rotation so we can restore it once the shard lands
+	OriginalSpritePitch = SpriteComponent->GetRelativeRotation().Pitch;
+
+	// Start playing the flying particles
+	if (FlyingParticles)
+	{
+		FlyingParticlesComponent->SetAsset(FlyingParticles);
+		FlyingParticlesComponent->Activate(true);
+	}
+
+	// Allow the shard's sprite to tilt while flying
+	SetActorTickEnabled(bTiltWhileFlying);
+}
+
+// Called every frame while the shard is flying
+void ACPP_TeleportShard::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// No need to rotate the sprite if the shard has landed or rotation is disabled
+	if (!bTiltWhileFlying || bLanded || !SpriteComponent)
+	{
+		return;
+	}
+
+	// Update the time used for tilting
+	TiltTime += DeltaTime;
+
+	// Slightly rotate the sprite back and forth
+	const float Tilt = FMath::Sin(TiltTime * TiltSpeed) * TiltAmount;
+
+	// Only rotate the sprite, not its collision
+	FRotator Rotation = SpriteComponent->GetRelativeRotation();
+	Rotation.Pitch = OriginalSpritePitch + Tilt;
+
+	SpriteComponent->SetRelativeRotation(Rotation);
 }
 
 // Launch the shard with a given velocity and optional plane normal to constrain movement to a 2D plane.
@@ -97,6 +163,58 @@ float ACPP_TeleportShard::GetCollisionRadius() const
 	return Collision ? Collision->GetScaledSphereRadius() : 0.f;
 }
 
+// *******************************************************************************
+//                             PLAY IMPACT EFFECTS
+// *******************************************************************************
+void ACPP_TeleportShard::PlayImpactEffects(const FVector& ImpactLocation, USoundBase* Sound)
+{
+	// Play the assigned impact sound
+	if (Sound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			Sound,
+			ImpactLocation,
+			1.f,
+			FMath::FRandRange(0.9f, 1.1f)
+		);
+	}
+
+	// Spawn impact particles at the collision location
+	if (ImpactParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			ImpactParticles,
+			ImpactLocation
+		);
+	}
+}
+
+// *******************************************************************************
+//                             STOP FLYING EFFECTS
+// *******************************************************************************
+void ACPP_TeleportShard::StopFlyingEffects()
+{
+	// Stop spawning flying particles
+	if (FlyingParticlesComponent)
+	{
+		FlyingParticlesComponent->Deactivate();
+	}
+
+	// Stop the sprite's tilting animation
+	SetActorTickEnabled(false);
+
+	// Restore the original sprite rotation
+	if (SpriteComponent)
+	{
+		FRotator Rotation = SpriteComponent->GetRelativeRotation();
+		Rotation.Pitch = OriginalSpritePitch;
+
+		SpriteComponent->SetRelativeRotation(Rotation);
+	}
+}
+
 // Handle a bounce off a surface. If it's a floor, stop the shard. If it's a wall or ceiling, reflect the velocity and scale it down.
 void ACPP_TeleportShard::HandleBounce(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
 {
@@ -106,13 +224,18 @@ void ACPP_TeleportShard::HandleBounce(const FHitResult& ImpactResult, const FVec
 	{
 		// Floor: zero the velocity. The movement component then stops simulating
 		// on its own and fires OnProjectileStop -> HandleStop (lands + arms).
+		// Explicitly stop simulation so the landing event is guaranteed.
 		ProjectileMovement->Velocity = FVector::ZeroVector;
+		ProjectileMovement->StopSimulating(ImpactResult);
 		return;
 	}
 
 	// Wall or ceiling: mirror the incoming velocity so the outgoing angle
 	// matches the angle it was thrown at, then scale the speed down.
 	ProjectileMovement->Velocity = ImpactVelocity.MirrorByVector(Normal) * WallBounceSpeedMultiplier;
+
+	// Play the collision sound and spawn impact particles
+	PlayImpactEffects(ImpactResult.ImpactPoint, Sound_Impact);
 
 	Arm();
 	BP_OnImpact(ImpactResult, true);
@@ -126,8 +249,26 @@ void ACPP_TeleportShard::HandleStop(const FHitResult& ImpactResult)
 	{
 		return;
 	}
+
 	bLanded = true;
 	LandingNormal = ImpactResult.bBlockingHit ? FVector(ImpactResult.ImpactNormal) : FVector::UpVector;
+
+	// ***************************************************************************************************************
+	//                                                  LANDING EFFECTS
+	// ***************************************************************************************************************
+
+	// Stop the flying particles and sprite rotation
+	StopFlyingEffects();
+
+	// Play the landing sound and spawn impact particles
+	PlayImpactEffects(ImpactResult.ImpactPoint, Sound_Landing);
+
+	// Activate the particles that appear while the shard is resting on the ground
+	if (LandedParticles)
+	{
+		LandedParticlesComponent->SetAsset(LandedParticles);
+		LandedParticlesComponent->Activate(true);
+	}
 
 	// Resting on the floor: enemies walking over it shouldn't trigger hits.
 	Collision->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
@@ -174,6 +315,13 @@ void ACPP_TeleportShard::HandleBeginOverlap(UPrimitiveComponent* OverlappedCompo
 	{
 		return;
 	}
+
+	// Only pawns are considered enemies.
+	if (!OtherActor->IsA<APawn>())
+	{
+		return;
+	}
+
 	// Only pawns are considered enemies.
 	if (!EnemyTag.IsNone() && !OtherActor->ActorHasTag(EnemyTag))
 	{
@@ -184,6 +332,9 @@ void ACPP_TeleportShard::HandleBeginOverlap(UPrimitiveComponent* OverlappedCompo
 		return;
 	}
 	HitEnemies.Add(OtherActor);
+
+	// Play the enemy impact sound and spawn particles
+	PlayImpactEffects(GetActorLocation(), Sound_HitEnemy);
 
 	// Bounce away from the enemy's centre (kept on the 2D plane).
 	FVector Velocity = ProjectileMovement->Velocity;

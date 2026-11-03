@@ -21,6 +21,8 @@ Movement Functions
 #include "MyAssets/Characters/Enemy/CPP_EnemyActionsInterface.h"
 
 ACPP_PlayerChar::ACPP_PlayerChar() {
+	PrimaryActorTick.bCanEverTick = true;
+
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(RootComponent);
 	Camera->SetRelativeLocationAndRotation(FVector(0.0f, 1920.0f, 0.0f), FRotator(0.0f, -90.0f, 0.0f));
@@ -31,6 +33,16 @@ ACPP_PlayerChar::ACPP_PlayerChar() {
 	// Center of Vine Component
 	CenterOfPlayerComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("Center of Player"));
 	CenterOfPlayerComponent->SetupAttachment(RootComponent);
+
+	// Sword attack flipbook: an overlay that only appears while attacking
+	SwordAttackFlipbookComponent = CreateDefaultSubobject<UPaperFlipbookComponent>(TEXT("Sword Attack Flipbook"));
+	// Attach to the player sprite so the sword inherits its facing rotation
+	SwordAttackFlipbookComponent->SetupAttachment(GetSprite());
+	SwordAttackFlipbookComponent->SetLooping(false);
+	SwordAttackFlipbookComponent->SetAutoActivate(false);
+	SwordAttackFlipbookComponent->SetVisibility(false);
+	SwordAttackFlipbookComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SwordAttackFlipbookComponent->SetTranslucentSortPriority(10);
 }
 
 
@@ -45,6 +57,43 @@ void ACPP_PlayerChar::BeginPlay()
 
 	// Initial Respawn point should be at player start
 	SetRespawnPoint(GetActorLocation());
+
+	// Keep the sword depth separate from the rotating player sprite
+	// The sword already inherits the player's rotation because it is attached to GetSprite().
+	// Reset any previous relative rotation so it does not rotate twice.
+	if (SwordAttackFlipbookComponent)
+	{
+		SwordAttackFlipbookComponent->SetRelativeRotation(FRotator::ZeroRotator);
+	}
+
+	// Hide the sword until the player attacks
+	if (SwordAttackFlipbookComponent)
+	{
+		SwordAttackFlipbookComponent->SetLooping(false);
+		SwordAttackFlipbookComponent->Stop();
+		SwordAttackFlipbookComponent->SetVisibility(false);
+		SwordAttackFlipbookComponent->OnFinishedPlaying.AddDynamic(this, &ACPP_PlayerChar::EndSwordAttack);
+	}
+}
+
+void ACPP_PlayerChar::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	if (!SwordAttackFlipbookComponent)
+	{
+		return;
+	}
+
+	// Get the sword's current world position
+	FVector SwordLocation = SwordAttackFlipbookComponent->GetComponentLocation();
+
+	// Keep the sword at a fixed Y position in WORLD space
+	// The sword can still rotate with the player's sprite
+	SwordLocation.Y = SwordWorldY;
+
+	// Apply the corrected position without changing rotation
+	SwordAttackFlipbookComponent->SetWorldLocation(SwordLocation);
 }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -96,6 +145,9 @@ void ACPP_PlayerChar::DoMove(float Forward) {
 		float RotationZ = Forward > 0.0f ? 0.0f : -180.0f;
 
 		GetSprite()->SetRelativeRotation(FRotator(0.0f, RotationZ, 0.0f));
+
+		// Rotate the sword with the player without rotating its position around the sprite
+		// The sword inherits this rotation automatically from GetSprite().
 
 		// Keep teleport throw direction in sync
 		if (UTeleportAbilityComponent* Teleport =
@@ -188,6 +240,7 @@ void ACPP_PlayerChar::Die()
 
 	// Player is alive
 	isDead = true;
+	EndSwordAttack();
 
 	// Make sure a Win Widget was assigned in the Editor
 	if (!DeathWidgetClass) return;
@@ -251,6 +304,9 @@ void ACPP_PlayerChar::Respawn()
 	if (UCharacterMovementComponent* CMC = GetCharacterMovement())
 	{
 		CMC->StopMovementImmediately();
+
+		// Restore normal movement after respawning
+		CMC->SetMovementMode(MOVE_Walking);
 	}
 
 	// Move player to respawn point
@@ -262,13 +318,20 @@ void ACPP_PlayerChar::Respawn()
 	// Set it to false
 	isDead = false;
 
+	// Reset sword animation when respawning
+	EndSwordAttack();
+
 	// Get the player's controller
 	ACPP_PlayerController* PC = Cast<ACPP_PlayerController>(
 		UGameplayStatics::GetPlayerController(GetWorld(), 0)
 	);
 
+	// Make sure the player is no longer holding a vine
 	if (PC)
 	{
+		// Player is no holding vine
+		PlayerController->SetIsHoldingVine(false);
+
 		// Make the mouse cursor visible
 		PC->bShowMouseCursor = false;
 
@@ -293,9 +356,9 @@ void ACPP_PlayerChar::StartClimbingVine()
 	// Player cannot grab a vine if being hurt
 	if (
 		bIsBeingHurt ||
-		bIsDefending 
-	) 
-	return;
+		bIsDefending
+		)
+		return;
 
 	// Play Particles
 	if (VineInteractParticles)
@@ -368,6 +431,9 @@ void ACPP_PlayerChar::FaceVine()
 
 	GetSprite()->SetRelativeRotation(FRotator(0.0f, RotationZ, 0.0f));
 
+	// Keep sword facing the vine while its depth remains fixed
+	// The sword inherits this rotation automatically from GetSprite().
+
 	// Keep teleport throw direction in sync
 	if (UTeleportAbilityComponent* Teleport =
 		FindComponentByClass<UTeleportAbilityComponent>())
@@ -401,31 +467,40 @@ void ACPP_PlayerChar::DoSwordAttack() {
 
 	if (!PlayerController) return;
 
-	if (bIsSwordAttacking || 
-		bIsBeingHurt || 
+	if (bIsSwordAttacking ||
+		bIsBeingHurt ||
 		bIsBeingHealed ||
-		PlayerController->GetIsHoldingVine()
-	) return;
+		PlayerController->GetIsHoldingVine() ||
+		isDead
+		) return;
 
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Throwing hands");
-	
+	// A flipbook must be assigned to the sword component in the editor
+	if (!SwordAttackFlipbookComponent || !SwordAttackFlipbookComponent->GetFlipbook() ||
+		SwordAttackFlipbookComponent->GetFlipbookLength() <= 0.f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Sword Attack: Assign a non-empty flipbook to Sword Attack Flipbook in CPP_PlayerChar_BP."));
+		return;
+	}
+
+	bIsSwordAttacking = true;
+
+	// Show the sword on top of the player, then play it from frame 0
+	SwordAttackFlipbookComponent->SetVisibility(true);
+	SwordAttackFlipbookComponent->SetLooping(false);
+	SwordAttackFlipbookComponent->PlayFromStart();
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Throwing hands");
+
 	HitBoxTrace(swordHitBoxSize);
 	if (enemy) {
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy hit");
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy hit");
 		if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
 			ICPP_EnemyActionsInterface::Execute_DefeatEnemy(enemy);
 		}
 	}
 
 	// Start the timer
-	GetWorld()->GetTimerManager().SetTimer(
-		AttackTimer,
-		this,
-		&ACPP_PlayerChar::EndSwordAttack,
-		attackCooldownInterval,
-		false
-	);
-
+	// Replaced the fixed cooldown timer with OnFinishedPlaying from the sword flipbook.
 	// Play Sound
 	if (Sound_SwordAttack)
 	{
@@ -436,8 +511,18 @@ void ACPP_PlayerChar::DoSwordAttack() {
 			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
 		);
 	}
+}
 
-	bIsSwordAttacking = true;
+// Called when the sword animation has finished playing
+void ACPP_PlayerChar::EndSwordAttack()
+{
+	bIsSwordAttacking = false;
+
+	if (SwordAttackFlipbookComponent)
+	{
+		SwordAttackFlipbookComponent->Stop();
+		SwordAttackFlipbookComponent->SetVisibility(false);
+	}
 }
 
 void ACPP_PlayerChar::DoSwordParry() {
@@ -461,18 +546,18 @@ void ACPP_PlayerChar::DoSwordParry() {
 	HitBoxTrace(swordDefenseBoxSize);
 	//float parryKnockbackDirection;
 	/*if (GetSprite()->GetRelativeScale3D().X > 0) {
-		
+
 		parryKnockbackDirection = parryKnockback;
 	}
 	else {
-		
+
 		parryKnockbackDirection = -(parryKnockback);
 	}*/
 
 	float RotationZ = GetSprite()->GetRelativeRotation().Yaw;
 
 	float parryKnockbackDirection =
-		FMath::IsNearlyZero(RotationZ) ? parryKnockback : -parryKnockback;	
+		FMath::IsNearlyZero(RotationZ) ? parryKnockback : -parryKnockback;
 
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
@@ -497,8 +582,7 @@ void ACPP_PlayerChar::DoSwordDefense() {
 		);
 	}
 
-	HitBoxTrace(swordDefenseBoxSize);	
-
+	HitBoxTrace(swordDefenseBoxSize);
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack Defended");
 		//enemy->LaunchCharacter(FVector(parryKnockback, 0, 0), true, false);
@@ -510,6 +594,7 @@ void ACPP_PlayerChar::DoStopSwordDefense() {
 }
 
 void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
+	enemy = nullptr; // Clear the previous attack's enemy so old hits cannot be reused
 	FHitResult hit;
 
 	FVector start = GetActorLocation();
@@ -549,7 +634,7 @@ void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
 	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, box, traceParams)) {
 
 		enemy = Cast<ACPP_Enemy_Master>(hit.GetActor());
-		
+
 	}
 }
 
@@ -565,8 +650,13 @@ void ACPP_PlayerChar::Hurt()
 	if (!PlayerController) return;
 
 	// If during a hurt event, the player was holding onto a vine, let go of it
-	if (PlayerController->GetIsHoldingVine()) PlayerController->SetIsHoldingVine(false);
-	
+	// If the player is holding onto a vine, release it and restore gravity
+	if (PlayerController->GetIsHoldingVine())
+	{
+		PlayerController->SetIsHoldingVine(false);
+		StopClimbingVine();
+	}
+
 	// Decrease amount of lives
 	amountOfLives = FMath::Max(0, amountOfLives - 1);
 
@@ -574,7 +664,7 @@ void ACPP_PlayerChar::Hurt()
 	OnLivesChanged.Broadcast(amountOfLives);
 
 	// ***************************
-	/*           HURT           */ 
+	/*           HURT           */
 	// ***************************
 	if (amountOfLives > 0)
 	{
@@ -631,7 +721,7 @@ void ACPP_PlayerChar::Heal()
 	if (bIsBeingHealed) return;
 
 	// Increate amount of lives
-	amountOfLives = FMath::Min(maxAmountOfLives, amountOfLives + 1 );
+	amountOfLives = FMath::Min(maxAmountOfLives, amountOfLives + 1);
 
 	// Call Event Dispatcher
 	OnLivesChanged.Broadcast(amountOfLives);
