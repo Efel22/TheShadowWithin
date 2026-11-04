@@ -25,6 +25,7 @@ EBTNodeResult::Type UCPP_AttackPlayer_BTTask::ExecuteTask(UBehaviorTreeComponent
 		if (auto* const enemy = Cast<ACPP_Enemy_Master>(enemyController->GetPawn()))
 		{
 			if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+				//enemy->SetEnemyIsAttacking(true);
 				ICPP_EnemyActionsInterface::Execute_AttackPlayer(enemy);
 
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

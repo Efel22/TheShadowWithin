@@ -471,7 +471,8 @@ void ACPP_PlayerChar::DoSwordAttack() {
 		bIsBeingHurt ||
 		bIsBeingHealed ||
 		PlayerController->GetIsHoldingVine() ||
-		isDead
+		isDead ||
+		bIsDefending
 		) return;
 
 	// A flipbook must be assigned to the sword component in the editor
@@ -527,7 +528,7 @@ void ACPP_PlayerChar::EndSwordAttack()
 
 void ACPP_PlayerChar::DoSwordParry() {
 
-	if (bIsDefending) return;
+	//if (bIsDefending) return;
 
 	//prevents the player from getting damage
 	bIsDefending = true;
@@ -561,7 +562,7 @@ void ACPP_PlayerChar::DoSwordParry() {
 
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
-		enemy->LaunchCharacter(FVector(parryKnockbackDirection, 0, 0), true, false);
+		//enemy->LaunchCharacter(FVector(parryKnockbackDirection, 0, 0), true, false);
 	}
 
 }

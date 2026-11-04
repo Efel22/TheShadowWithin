@@ -45,6 +45,10 @@ void ACPP_Enemy_Master::SetEnemyIsLost(bool EIL) {
 	bEnemyIsLost = EIL;
 }
 
+/*void ACPP_Enemy_Master::SetEnemyIsAttacking(bool EIA) {
+	bEnemyIsAttacking = EIA;
+}*/
+
 float ACPP_Enemy_Master::GetFacingDirection() {
 	return FacingDirection;
 }
@@ -70,3 +74,7 @@ UBehaviorTree* ACPP_Enemy_Master::GetBehaviorTree() const {
 bool ACPP_Enemy_Master::GetEnemyIsLost() {
 	return bEnemyIsLost;
 }
+
+/*bool ACPP_Enemy_Master::GetEnemyIsAttacking() {
+	return bEnemyIsAttacking;
+}*/

@@ -59,17 +59,27 @@ protected:
 
 	void EnemyIsLost_Implementation() override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UBoxComponent* TurnCollider;
+
+	UFUNCTION()
+	void OnBeginTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnEndTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	bool bCanTurn = false;
 
 	//~~~Enemy Jump
 	//~~~Jump Collider
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UBoxComponent* JumpCollider;
+	UBoxComponent* ClimbCollider;
 
 	UFUNCTION()
-	void OnBeginJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnBeginClimbOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	void OnEndClimbOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	bool canJump = true;
 
@@ -95,7 +105,7 @@ protected:
 	float attackHitBox = 300.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
-	float knockback = 2000.f;
+	float knockback = 200.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
 	bool bEnemyIsAttacking = false;

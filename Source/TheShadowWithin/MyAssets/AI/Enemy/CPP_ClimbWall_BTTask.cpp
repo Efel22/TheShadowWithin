@@ -6,6 +6,8 @@
 #include "MyAssets/Characters/Enemy/CPP_EnemyAiController.h"
 #include "MyAssets/Characters/Enemy/CPP_Enemy_Plush.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MyAssets/Characters/CPP_PlayerChar.h"
+#include "Kismet/GameplayStatics.h"
 
 UCPP_ClimbWall_BTTask::UCPP_ClimbWall_BTTask(FObjectInitializer const& ObjectInitializer) : UBTTask_BlackboardBase(ObjectInitializer)
 {
@@ -41,12 +43,38 @@ void UCPP_ClimbWall_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 	if (auto* const controller = Cast<ACPP_EnemyAiController>(OwnerComp.GetAIOwner()))
 	{
 		
-			
-			//Enemy
-			if (auto* enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
-			{
-				enemy->AddMovementInput(FVector(0, 0, 1), 1);
+			if (FollowingPlayer) {
+				if (auto* enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
+				{
+
+					if (auto* player = Cast<ACPP_PlayerChar>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0))) {
+
+
+						float DirectionZ = player->GetActorLocation().Z - enemy->GetActorLocation().Z;
+
+						int32 newClimbingDirection;
+						newClimbingDirection = DirectionZ > 0.f ? 1 : -1;
+
+
+						enemy->AddMovementInput(FVector(0, 0, 1), newClimbingDirection);
+
+						
+
+						//enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
+					}
+				}
+				
 			}
+			else {
+				//Enemy
+				if (auto* enemy = Cast<ACPP_Enemy_Plush>(controller->GetPawn()))
+				{
+					enemy->AddMovementInput(FVector(0, 0, 1), 1);
+				}
+			}
+		
+			
+		
 		
 	}
 
