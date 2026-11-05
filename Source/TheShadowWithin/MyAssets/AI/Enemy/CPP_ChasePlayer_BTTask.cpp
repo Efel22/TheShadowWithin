@@ -41,8 +41,21 @@ void UCPP_ChasePlayer_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8*
 				int32 newFacingDirection;
 				newFacingDirection = DirectionX > 0.f ? 1 : -1;
 				enemy->SetFacingDirection(newFacingDirection);
-				enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
-
+				if (!FMath::IsNearlyZero(DirectionX, 1.f)) {
+					enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
+				}
+				//enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
+				
+				
+				int verticalDirection = player->GetActorLocation().Z - enemy->GetActorLocation().Z;
+				if ((verticalDirection >= 0 && (enemy->GetCharacterMovement()->Velocity.Z < -10 && enemy->GetCharacterMovement()->IsFalling())) && enemy->GetEnemyCanJump() ) {
+					if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+						ICPP_EnemyActionsInterface::Execute_EnemyJump(enemy);
+						GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, "JUMP");
+					}
+				}
+				
+				
 			}
 
 			enemy->UpdateSpriteRotation();

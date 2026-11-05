@@ -37,6 +37,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float enemyDamage;
 
+	bool bEnemyIsLost = false;
+
+	//~~~Enemy Attack
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
+	//bool bEnemyIsAttacking = false;
+
 	//void AttackPlayer_Implementation() override;
 
 	// *******************************************************************************
@@ -65,15 +71,18 @@ public:
 	//~~~Setters and Getters
 
 	void SetEnemyHP(float newEnemyHP);
-
-	void SetFacingDirection(float FD);
-
-	
+	void SetFacingDirection(float FD);	
 	void SetEnemyDamage(float newEnemyDmage);
+
+	void SetEnemyIsLost(bool EIL);
+	//void SetEnemyIsAttacking(bool EIA);
 
 	float GetEnemyHP();
 	float GetFacingDirection();
 	float GetEnemyDamage();
+
+	bool GetEnemyIsLost();
+	//bool GetEnemyIsAttacking();
 
 	ACPP_PatrolPoint* GetPatrolPoint();
 

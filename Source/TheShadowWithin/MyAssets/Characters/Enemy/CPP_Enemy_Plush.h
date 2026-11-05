@@ -44,16 +44,48 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+
+	//~~~Enemy Patrol
+	FTimerHandle ReturnToOriginTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Patrol")
+	float returnToOriginTime = .5f;
+
+	void ReturnToOrigin();
+
+	FVector startingLocation;
+
+	//bool bEnemyIsLost = false;
+
+	void EnemyIsLost_Implementation() override;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	UBoxComponent* TurnCollider;
+
+	UFUNCTION()
+	void OnBeginTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnEndTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	bool bisStuckClimbing = false;
+
+	void TurnEnemy_Implementation(bool turn) override;
+
 	//~~~Enemy Jump
 	//~~~Jump Collider
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	UBoxComponent* JumpCollider;
+	UBoxComponent* ClimbCollider;
 
 	UFUNCTION()
-	void OnBeginJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnBeginClimbOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	void OnEndClimbOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	bool canJump = true;
+
+	void EnemyJump_Implementation() override;
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//~~~Enemy Attack
@@ -75,7 +107,7 @@ protected:
 	float attackHitBox = 300.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
-	float knockback = 600.f;
+	float knockback = 200.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Attack")
 	bool bEnemyIsAttacking = false;
@@ -152,7 +184,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Jump")
 	float jumpTime = 5.f;
 
-	void EnemyJump();
+	//void EnemyJump();
 
 	
 
@@ -170,6 +202,7 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	
 
 	//~~~Enemy defeat
 	// Defeat();
@@ -178,7 +211,17 @@ public:
 	//Setters
 	void SetEnemyisAttacking(bool EA);
 
+	//void SetEnemyIsLost(bool EIL);
+	void SetEnemyIsStuckClimbing(bool ESC);
+
+
 	//Getters
 	bool GetEnemyIsAttacking();
+
+	bool GetEnemyCanJump();
+
+	bool GetEnemyIsStuckClimbing();
+
+	//bool GetEnemyIsLost();
 
 };

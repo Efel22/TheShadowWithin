@@ -471,7 +471,8 @@ void ACPP_PlayerChar::DoSwordAttack() {
 		bIsBeingHurt ||
 		bIsBeingHealed ||
 		PlayerController->GetIsHoldingVine() ||
-		isDead
+		isDead ||
+		bIsDefending
 		) return;
 
 	// A flipbook must be assigned to the sword component in the editor
@@ -527,7 +528,8 @@ void ACPP_PlayerChar::EndSwordAttack()
 
 void ACPP_PlayerChar::DoSwordParry() {
 
-	if (bIsDefending) return;
+	//if (bIsDefending) return;
+	if (bDefenseIsOnCooldown) { return; }
 
 	//prevents the player from getting damage
 	bIsDefending = true;
@@ -561,12 +563,15 @@ void ACPP_PlayerChar::DoSwordParry() {
 
 	if (enemy) {
 		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Parried attack");
-		enemy->LaunchCharacter(FVector(parryKnockbackDirection, 0, 0), true, false);
+		//enemy->LaunchCharacter(FVector(parryKnockbackDirection, 0, 0), true, false);
 	}
 
 }
 
 void ACPP_PlayerChar::DoSwordDefense() {
+
+	
+
 	//prevents the player from getting damage
 	bIsDefending = true;
 
@@ -589,8 +594,15 @@ void ACPP_PlayerChar::DoSwordDefense() {
 	}
 }
 
-void ACPP_PlayerChar::DoStopSwordDefense() {
+void ACPP_PlayerChar::DoStopSwordDefense(float cooldownTime) {
+	bDefenseIsOnCooldown = true;
 	bIsDefending = false;
+
+	GetWorldTimerManager().SetTimer(DefenseCooldownTimer, this, &ACPP_PlayerChar::DefenseCooldownOver, cooldownTime, false);
+}
+
+void ACPP_PlayerChar::DefenseCooldownOver() {
+	bDefenseIsOnCooldown = false;
 }
 
 void ACPP_PlayerChar::HitBoxTrace(float hitBoxSize) {
@@ -765,4 +777,8 @@ void ACPP_PlayerChar::EndHeal()
 //Setters and Getters
 bool ACPP_PlayerChar::GetIsPlayerDefending() {
 	return bIsDefending;
+}
+
+bool ACPP_PlayerChar::GetIsDefenseOnCooldown() {
+	return bDefenseIsOnCooldown;
 }

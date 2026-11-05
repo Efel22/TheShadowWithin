@@ -46,8 +46,9 @@ void ACPP_PlayerController::SetupInputComponent()
 		// Started fires once per press, unlike Triggered which can repeat while held
 		EnhancedInputComponent->BindAction(SwordAtkAction, ETriggerEvent::Started, this, &ACPP_PlayerController::SwordAttack);
 		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Ongoing, this, &ACPP_PlayerController::SwordParry);
-		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordDefense);
-		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Completed, this, &ACPP_PlayerController::StopSwordDefense);
+		//EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::SwordDefense);
+		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Triggered, this, &ACPP_PlayerController::StopSwordDefenseLong);
+		EnhancedInputComponent->BindAction(SwordDefAction, ETriggerEvent::Canceled, this, &ACPP_PlayerController::StopSwordDefenseShort);
 	}
 }
 
@@ -133,8 +134,12 @@ void ACPP_PlayerController::SwordDefense() {
 	PlayerCharacter->DoSwordDefense();
 }
 
-void ACPP_PlayerController::StopSwordDefense() {
-	PlayerCharacter->DoStopSwordDefense();
+void ACPP_PlayerController::StopSwordDefenseShort() {
+	PlayerCharacter->DoStopSwordDefense(shortTime);
+}
+
+void ACPP_PlayerController::StopSwordDefenseLong() {
+	PlayerCharacter->DoStopSwordDefense(longTime);
 }
 
 void ACPP_PlayerController::SetIsHoldingVine(bool _value, float vine_pos_x) {

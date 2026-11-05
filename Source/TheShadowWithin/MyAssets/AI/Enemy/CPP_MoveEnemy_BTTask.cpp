@@ -39,6 +39,7 @@ void UCPP_MoveEnemy_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 				auto const GlobalPoint = enemy->GetPatrolPoint()->GetActorTransform().TransformPosition(Point);
 
 				float DirectionX = GlobalPoint.X - enemy->GetActorLocation().X;
+				float DirectionZ = GlobalPoint.Z - enemy->GetActorLocation().Z;
 
 				float distance = FVector::Dist(GlobalPoint, enemy->GetActorLocation());
 
@@ -50,8 +51,25 @@ void UCPP_MoveEnemy_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 
 					int32 newFacingDirection;
 					newFacingDirection = DirectionX > 0.f ? 1 : -1;
-					enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
+					if (!FMath::IsNearlyZero(DirectionX, 1.f)) {
+						enemy->AddMovementInput(FVector(1, 0, 0), newFacingDirection);
+						
+					}
+					
 					//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Moving");
+
+
+					
+					if (FMath::IsNearlyZero(DirectionX, 1.f) && !enemy->WasRecentlyRendered() && !enemy->GetEnemyIsLost())
+					{
+						GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "RENDER UPON ME");
+						if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+							ICPP_EnemyActionsInterface::Execute_EnemyIsLost(enemy);
+						}
+						enemy->SetEnemyIsLost(true);
+					}
+
+					//if(!enemy->WasRecentlyRendered()){ GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "RENDER UPON ME"); }
 				}
 				else {
 					FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

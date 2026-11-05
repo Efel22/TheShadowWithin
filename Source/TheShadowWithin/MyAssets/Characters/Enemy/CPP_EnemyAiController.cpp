@@ -25,6 +25,7 @@ void ACPP_EnemyAiController::OnPossess(APawn* InPawn) {
 	}
 }
 
+
 void ACPP_EnemyAiController::SetupPerceptionSystem() {
 	SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("Sight Config"));
 

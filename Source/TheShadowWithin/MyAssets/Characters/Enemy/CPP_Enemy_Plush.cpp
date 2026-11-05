@@ -24,14 +24,21 @@
 ACPP_Enemy_Plush::ACPP_Enemy_Plush()
 {
 	AttackCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Attack Collider"));
-	AttackCollider->SetupAttachment(RootComponent);
+	AttackCollider->SetupAttachment(GetSprite());
 	AttackCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginAttackOverlap);
 	AttackCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndAttackOverlap);
 
-	JumpCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Jump Collider"));
-	JumpCollider->SetupAttachment(RootComponent);
-	JumpCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginJumpOverlap);
-	JumpCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndJumpOverlap);
+	ClimbCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Climb Collider"));
+	ClimbCollider->SetupAttachment(GetSprite());
+	ClimbCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginClimbOverlap);
+	ClimbCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndClimbOverlap);
+
+	TurnCollider = CreateDefaultSubobject<UBoxComponent>(TEXT("Turn Collider"));
+	TurnCollider->SetupAttachment(GetSprite());
+	TurnCollider->OnComponentBeginOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnBeginTurnOverlap);
+	TurnCollider->OnComponentEndOverlap.AddDynamic(this, &ACPP_Enemy_Plush::OnEndTurnOverlap);
+	TurnCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
 
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -86,7 +93,12 @@ void ACPP_Enemy_Plush::BeginPlay()
 	// Set the sprite's initial facing direction
 	UpdateSpriteRotation();
 
+	startingLocation = GetActorLocation();
+
+	
+
 	// Start the enemy's jumping timer
+	/*
 	GetWorldTimerManager().SetTimer(
 		JumpTimer,
 		this,
@@ -94,6 +106,7 @@ void ACPP_Enemy_Plush::BeginPlay()
 		jumpTime,
 		true
 	);
+	*/
 }
 
 // *******************************************************************************
@@ -107,67 +120,10 @@ void ACPP_Enemy_Plush::Tick(float DeltaTime)
 	// Safety Check
 	if (!PlayerCharRef) return;
 
-	/*
-	//If the enemy has been defeated by the player make it dissapear and stop following the player
-	if (!bHasBeenDefeated) {
+	
 
-		// How far is it from the player?
-		float distance = FVector::Dist(PlayerCharRef->GetActorLocation(), GetActorLocation());
+	if (GetCharacterMovement()->IsMovingOnGround()) { canJump = true; }
 
-		// Is it within range?
-		if (distance <= FDetectionRange)
-		{
-			// Where should this enemy face?
-			// Based on the two characters positions (player and this enemy's) get its sign as it determines the location
-			// NOTE: This is based on the asumption that 'X' axis represents "right" and "left"!!!!
-
-			// Get the horizontal distance between the player and enemy
-			float DirectionX = PlayerCharRef->GetActorLocation().X - GetActorLocation().X;
-
-			// Update the enemy's facing direction
-			// **NOTE: Prevents changing direction if the player is directly above/below
-			if (!FMath::IsNearlyZero(DirectionX, 1.f))
-			{
-				FacingDirection = DirectionX > 0.f ? 1 : -1;
-			}
-
-			// Prevents enemy from disappearing visually
-			// ?: Rotates ONLY the sprite, without using negative scale
-			UpdateSpriteRotation();
-
-			// Moves the enemy in the 'x' axis in the direction that faces the player
-			AddMovementInput(FVector(1.f, 0.f, 0.f), FacingDirection);
-
-			
-
-		}
-				
-
-		
-		// ***************************
-		/*      ROTATION DEBUG      */
-		// ***************************
-		
-		/*
-
-		// Display the enemy's current facing and rotation
-		// ?: Useful for detecting if another system is overriding the sprite's rotation
-		if (bDebugSpriteRotation && GEngine && GetSprite())
-		{
-			GEngine->AddOnScreenDebugMessage(
-				static_cast<uint64>(GetUniqueID()),
-				0.f,
-				FColor::Yellow,
-				FString::Printf(
-					TEXT("Enemy Facing: %d | Sprite Yaw: %.1f | Actor Yaw: %.1f"),
-					FacingDirection,
-					GetSprite()->GetRelativeRotation().Yaw,
-					GetActorRotation().Yaw
-				)
-			);
-		}
-	}
-	*/
 }
 
 
@@ -179,45 +135,34 @@ void ACPP_Enemy_Plush::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 }
 
 //When the enemy gets close to a wall it will inform the behevior tree to start climbing
-void ACPP_Enemy_Plush::OnBeginJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
+void ACPP_Enemy_Plush::OnBeginClimbOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
 	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
 	if (level) {
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Touching wall");
+		//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Touching wall");
 		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 			enemyController->GetBlackboardComponent()->SetValueAsBool("CanClimb", true);
 		}
+		TurnCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 		
 	}
 }
 
-void ACPP_Enemy_Plush::OnEndJumpOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
+void ACPP_Enemy_Plush::OnEndClimbOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex) {
 	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
 	if (level) {
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Leaving wall");
+		//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Leaving wall");
 		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 			enemyController->GetBlackboardComponent()->SetValueAsBool("CanClimb", false);
 		}
+		TurnCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	}
 }
 
-//After set amount of time passes the enemy jumps based on is the player has the higher ground
-void ACPP_Enemy_Plush::EnemyJump() {
-
-	// Safety Check
-	// ?: Prevents jumping if the player reference is invalid or the enemy has been defeated
-	if (!PlayerCharRef || bHasBeenDefeated) return;
-
-	int verticalDirection = FMath::Sign(
-		PlayerCharRef->GetActorLocation().Z - GetActorLocation().Z
-	);
-
-	// Only jump if the player is above the enemy
-	// **NOTE: Prevents unnecessary jump attempts while already falling
-	if (verticalDirection > 0 && !GetCharacterMovement()->IsFalling()) {
-		Jump();
-	}
-
+void ACPP_Enemy_Plush::EnemyJump_Implementation() {
+	canJump = false;
+	LaunchCharacter(FVector(0, 0, GetCharacterMovement()->JumpZVelocity), false, true);
+	//Jump();
 	UCharacterMovementComponent* CMC = GetCharacterMovement();
 	if (!CMC || CMC->IsFalling()) return;
 
@@ -232,6 +177,9 @@ void ACPP_Enemy_Plush::EnemyJump() {
 		);
 	}
 }
+
+
+
 
 void ACPP_Enemy_Plush::OnBeginAttackOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) {
 	ACPP_PlayerChar* player = Cast<ACPP_PlayerChar>(OtherActor);
@@ -259,11 +207,10 @@ void ACPP_Enemy_Plush::OnEndAttackOverlap(UPrimitiveComponent* OverlappedCompone
 
 void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
 	FHitResult hit;
-
 	FVector start = GetActorLocation();
 	FVector end = GetActorLocation();
 	FQuat rot = FQuat(0, 0, 0, 0);
-	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 100.f));
+	FCollisionShape box = FCollisionShape::MakeBox(FVector(0, 50.f, 200.f));
 	FCollisionQueryParams traceParams;
 	traceParams.AddIgnoredActor(this);
 
@@ -320,12 +267,11 @@ void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
 	}
 }
 
-/*void ACPP_Enemy_Plush::AttackPlayer_Implementation() {
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "You Are being attacked");
-}*/
+
 
 void ACPP_Enemy_Plush::StopAttack() {
 	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attack has stopped");
+	
 	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
 		enemyController->GetBlackboardComponent()->SetValueAsBool("CanAttackPlayer", false);
 	}
@@ -347,6 +293,52 @@ void ACPP_Enemy_Plush::DefeatEnemy_Implementation() {
 	bHasBeenDefeated = true;
 }
 
+
+//~~~Enemy Return To Patrol when lost
+void ACPP_Enemy_Plush::EnemyIsLost_Implementation() {
+	GetWorldTimerManager().SetTimer(ReturnToOriginTimer, this, &ACPP_Enemy_Plush::ReturnToOrigin, returnToOriginTime, false);
+}
+
+void ACPP_Enemy_Plush::ReturnToOrigin() {
+	SetActorLocation(startingLocation);
+	bEnemyIsLost = false;
+}
+
+void ACPP_Enemy_Plush::TurnEnemy_Implementation(bool turn) {
+	if (turn) {
+		TurnCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
+	else {
+		TurnCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
+
+//~~~Rotate Enemy
+void ACPP_Enemy_Plush::OnBeginTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) 
+{
+	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
+	if (level) {
+		bisStuckClimbing = true;
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy is stuck while climbing");
+		/*if (bCanTurn) {
+			SetFacingDirection(-(GetFacingDirection()));
+			UpdateSpriteRotation();
+			bCanTurn = false;
+
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attempting to turn");
+		}*/
+	}
+}
+
+void ACPP_Enemy_Plush::OnEndTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
+	if (level) {
+		bisStuckClimbing = false;
+
+		
+	}
+}
 
 // *******************************************************************************
 //                                 HURT
@@ -400,4 +392,23 @@ void ACPP_Enemy_Plush::Hurt()
 	}
 }
 
+void ACPP_Enemy_Plush::SetEnemyIsStuckClimbing(bool ESC) {
+	bisStuckClimbing = ESC;
+}
+
+bool ACPP_Enemy_Plush::GetEnemyCanJump() {
+	return canJump;
+}
+
+bool ACPP_Enemy_Plush::GetEnemyIsStuckClimbing() {
+	return bisStuckClimbing;
+}
+
+/*void ACPP_Enemy_Plush::SetEnemyIsLost(bool EIL) {
+	bEnemyIsLost = EIL;
+}
+
+bool ACPP_Enemy_Plush::GetEnemyIsLost() {
+	return bEnemyIsLost;
+}*/
 

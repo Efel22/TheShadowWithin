@@ -71,7 +71,16 @@ protected:
 	void SwordDefense();
 
 	UFUNCTION()
-	void StopSwordDefense();
+	void StopSwordDefenseShort();
+
+	UFUNCTION()
+	void StopSwordDefenseLong();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defense Cooldown")
+	float shortTime = .5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Defense Cooldown")
+	float longTime = 3.f;
 
 	// ~~~ Vine Logic
 	UFUNCTION()
