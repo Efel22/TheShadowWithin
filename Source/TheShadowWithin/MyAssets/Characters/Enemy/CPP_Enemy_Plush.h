@@ -49,7 +49,7 @@ protected:
 	FTimerHandle ReturnToOriginTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Patrol")
-	float returnToOriginTime = 2.f;
+	float returnToOriginTime = .5f;
 
 	void ReturnToOrigin();
 
@@ -68,7 +68,9 @@ protected:
 	UFUNCTION()
 	void OnEndTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	bool bCanTurn = false;
+	bool bisStuckClimbing = false;
+
+	void TurnEnemy_Implementation(bool turn) override;
 
 	//~~~Enemy Jump
 	//~~~Jump Collider
@@ -210,12 +212,15 @@ public:
 	void SetEnemyisAttacking(bool EA);
 
 	//void SetEnemyIsLost(bool EIL);
+	void SetEnemyIsStuckClimbing(bool ESC);
 
 
 	//Getters
 	bool GetEnemyIsAttacking();
 
 	bool GetEnemyCanJump();
+
+	bool GetEnemyIsStuckClimbing();
 
 	//bool GetEnemyIsLost();
 

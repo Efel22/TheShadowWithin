@@ -83,6 +83,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsDefending = false;
 
+
+	FTimerHandle DefenseCooldownTimer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Attack")
+	float defenseCooldownTime = 0.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bDefenseIsOnCooldown = false;
+
+	void DefenseCooldownOver();
+
 	UPROPERTY()
 	ACPP_Enemy_Master* enemy;
 
@@ -196,7 +207,7 @@ public:
 	void DoSwordDefense();
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
-	void DoStopSwordDefense();
+	void DoStopSwordDefense(float cooldownTime);
 	//--------------------------------------------------------------------------------------------------------------
 
 	//~~~HEALTH FUNCTIONS & LOGIC
@@ -280,5 +291,9 @@ public:
 	FVector GetRespawnPoint() { return RespawnLocation; }
 
 	//Setters and getters
+	UFUNCTION(BlueprintCallable)
 	bool GetIsPlayerDefending();
+
+	UFUNCTION(BlueprintCallable)
+	bool GetIsDefenseOnCooldown();
 };

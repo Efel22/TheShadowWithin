@@ -304,18 +304,29 @@ void ACPP_Enemy_Plush::ReturnToOrigin() {
 	bEnemyIsLost = false;
 }
 
+void ACPP_Enemy_Plush::TurnEnemy_Implementation(bool turn) {
+	if (turn) {
+		TurnCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	}
+	else {
+		TurnCollider->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+}
+
 //~~~Rotate Enemy
 void ACPP_Enemy_Plush::OnBeginTurnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) 
 {
 	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
 	if (level) {
-		if (bCanTurn) {
+		bisStuckClimbing = true;
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Enemy is stuck while climbing");
+		/*if (bCanTurn) {
 			SetFacingDirection(-(GetFacingDirection()));
 			UpdateSpriteRotation();
 			bCanTurn = false;
 
 			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Attempting to turn");
-		}
+		}*/
 	}
 }
 
@@ -323,9 +334,9 @@ void ACPP_Enemy_Plush::OnEndTurnOverlap(UPrimitiveComponent* OverlappedComponent
 {
 	APaperTileMapActor* level = Cast<APaperTileMapActor>(OtherActor);
 	if (level) {
-		bCanTurn = true;
+		bisStuckClimbing = false;
 
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "can turn");
+		
 	}
 }
 
@@ -381,8 +392,16 @@ void ACPP_Enemy_Plush::Hurt()
 	}
 }
 
+void ACPP_Enemy_Plush::SetEnemyIsStuckClimbing(bool ESC) {
+	bisStuckClimbing = ESC;
+}
+
 bool ACPP_Enemy_Plush::GetEnemyCanJump() {
 	return canJump;
+}
+
+bool ACPP_Enemy_Plush::GetEnemyIsStuckClimbing() {
+	return bisStuckClimbing;
 }
 
 /*void ACPP_Enemy_Plush::SetEnemyIsLost(bool EIL) {
