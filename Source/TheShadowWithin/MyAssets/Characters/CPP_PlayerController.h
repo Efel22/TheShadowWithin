@@ -102,7 +102,7 @@ protected:
 public:
 
 	UFUNCTION(BlueprintCallable)
-	void SetIsHoldingVine(bool _value, float vine_pos_x = 0.0f);
+	void SetIsHoldingVine(bool _value = true, float vine_pos_x = 0.0f, bool playVineParticles = true);
 
 	UFUNCTION(BlueprintCallable)
 	bool GetIsHoldingVine() { return bIsHoldingVine; }

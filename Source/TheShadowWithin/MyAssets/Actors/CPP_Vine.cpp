@@ -94,9 +94,7 @@ void ACPP_Vine::OnDetectionBoxBeginOverlap(
 
 	// ?: Set the HoldingVine to true on the Controller, also 
 	// passes this vine's X position (used to make it so player always faces the vine)
-	PC->SetIsHoldingVine(true, CenterOfVineComponent->GetComponentLocation().X);
-
-	
+	PC->SetIsHoldingVine(true, CenterOfVineComponent->GetComponentLocation().X, playsVineParticles);
 
 	// Play Sound
 	if (GrabVineSound)
