@@ -179,6 +179,15 @@ public:
 	// Stores the last vine's x position that was grabed
 	float currentVine_PosX = 0.f;
 
+	UFUNCTION()
+	void SetDoesPlayVineParticles(bool _value) { playVineParticles = _value; }
+
+	UFUNCTION()
+	bool GetDoesPlayVineParticles() { return playVineParticles; }
+
+	// Determines whether a vine particle will play or not
+	bool playVineParticles = false;
+
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void DoJump();
 

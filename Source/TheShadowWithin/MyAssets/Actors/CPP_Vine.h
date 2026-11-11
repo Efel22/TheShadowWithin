@@ -46,6 +46,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine|Audio")
 	USoundBase* LetGoVineSound;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine|Settings")
+	bool playsVineParticles = true;
+
 	// Particles that play when the vine is grabbed and let go of 
 	/*UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components|Vine|Visual")
 	UNiagaraSystem* VineInteractParticles;*/

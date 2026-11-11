@@ -361,7 +361,7 @@ void ACPP_PlayerChar::StartClimbingVine()
 		return;
 
 	// Play Particles
-	if (VineInteractParticles)
+	if (VineInteractParticles && playVineParticles)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
 			VineInteractParticles,
@@ -384,7 +384,7 @@ void ACPP_PlayerChar::StopClimbingVine()
 	CMC->SetMovementMode(MOVE_Falling);
 
 	// Play Particles
-	if (VineInteractParticles)
+	if (VineInteractParticles && playVineParticles)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),
 			VineInteractParticles,

@@ -142,9 +142,10 @@ void ACPP_PlayerController::StopSwordDefenseLong() {
 	PlayerCharacter->DoStopSwordDefense(longTime);
 }
 
-void ACPP_PlayerController::SetIsHoldingVine(bool _value, float vine_pos_x) {
+void ACPP_PlayerController::SetIsHoldingVine(bool _value, float vine_pos_x, bool playVineParticles) {
 	if (_value)
 	{
+		PlayerCharacter->SetDoesPlayVineParticles(playVineParticles);
 		PlayerCharacter->StartClimbingVine();
 		PlayerCharacter->SetVine_PosX(vine_pos_x);
 	}
