@@ -180,6 +180,30 @@ void UTeleportAbilityComponent::ResetAbility(bool bClearCooldown)
 	OnAbilityReset.Broadcast();
 }
 
+void UTeleportAbilityComponent::CancelTeleport()
+{
+	// Only usable after the shard has been thrown (InFlight or Armed). In any other state, deny the input.
+	if (!CanCancelTeleport())
+	{
+		OnTeleportDenied.Broadcast();
+		return;
+	}
+
+	// Remove the shard quietly (no fizzle event, no fizzle cooldown).
+	if (ACPP_TeleportShard* Projectile = ActiveProjectile.Get())
+	{
+		Projectile->OnDestroyed.RemoveAll(this);
+		Projectile->OnArmed.RemoveAll(this);
+		Projectile->OnHitEnemy.RemoveAll(this);
+		Projectile->Destroy();
+	}
+	ActiveProjectile.Reset();
+
+	// Notify listeners, then start the (usually shorter) cancel cooldown.
+	OnTeleportCancelled.Broadcast();
+	StartCooldown(CancelCooldownDuration);
+}
+
 
 // ------------------------------------------------------------------ Throw angle
 
@@ -203,7 +227,8 @@ float UTeleportAbilityComponent::GetCooldownRemaining() const
 
 float UTeleportAbilityComponent::GetCooldownFractionRemaining() const
 {
-	return CooldownDuration > 0.f ? FMath::Clamp(GetCooldownRemaining() / CooldownDuration, 0.f, 1.f) : 0.f;
+	// Divide by the length of the cooldown that is actually running (normal or cancel).
+	return CurrentCooldownDuration > 0.f ? FMath::Clamp(GetCooldownRemaining() / CurrentCooldownDuration, 0.f, 1.f) : 0.f;
 }
 
 
@@ -836,7 +861,7 @@ void UTeleportAbilityComponent::TryTeleport()
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), TeleportFX, OwnerActor->GetActorLocation());
 	}
 
-	// Destroy the projectile and reset the active reference, then broadcast the OnTeleported event and start the cooldown. 
+	// Destroy the projectile and reset the active reference, then broadcast the OnTeleported event and start the cooldown.
 	// If hit-stop on arrival is enabled, start the hit-stop effect.
 
 	bIsTeleporting = true;
@@ -973,16 +998,20 @@ void UTeleportAbilityComponent::UnstunEnemy(TWeakObjectPtr<AActor> Enemy)
 
 // ------------------------------------------------------------------ Cooldown
 
-void UTeleportAbilityComponent::StartCooldown()
+void UTeleportAbilityComponent::StartCooldown(float Duration)
 {
+	// No duration given (default -1) = use the normal CooldownDuration.
+	const float Length = Duration < 0.f ? CooldownDuration : Duration;
+
 	// Only start cooldown if the ability is not already in cooldown. If it is, do nothing.
-	if (CooldownDuration <= 0.f)
+	if (Length <= 0.f)
 	{
 		FinishCooldown();
 		return;
 	}
+	CurrentCooldownDuration = Length; // Remembered for GetCooldownFractionRemaining (HUD)
 	SetState(ETeleportAbilityState::Cooldown);
-	GetWorld()->GetTimerManager().SetTimer(CooldownTimer, this, &UTeleportAbilityComponent::FinishCooldown, CooldownDuration, false);
+	GetWorld()->GetTimerManager().SetTimer(CooldownTimer, this, &UTeleportAbilityComponent::FinishCooldown, Length, false);
 }
 
 void UTeleportAbilityComponent::FinishCooldown()

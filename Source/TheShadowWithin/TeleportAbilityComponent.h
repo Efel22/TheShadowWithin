@@ -8,6 +8,8 @@
 //   Armed    --press-->   teleport, projectile destroyed, Cooldown
 //   Cooldown --CooldownDuration--> Ready
 // If the projectile is destroyed without teleporting (fell out of world / lifetime) it "fizzles".
+// Cancel (separate input): while the shard is out (InFlight or Armed), CancelTeleport() removes it
+// without teleporting and starts a shorter cooldown (CancelCooldownDuration).
 
 #pragma once
 
@@ -89,6 +91,17 @@ public:
 	 *  ends any hit-stop and, if bClearCooldown, makes the ability ready immediately. */
 	UFUNCTION(BlueprintCallable, Category = "Teleport")
 	void ResetAbility(bool bClearCooldown = true);
+
+	// ---------- Cancel ----------
+	/** Removes the thrown shard WITHOUT teleporting. Only works after the shard is thrown (InFlight or Armed);
+	 *  otherwise it just fires OnTeleportDenied. Starts a CancelCooldownDuration cooldown.
+	 *  Connect the Enhanced Input "Started" pin of your cancel action to this. */
+	UFUNCTION(BlueprintCallable, Category = "Teleport|Input")
+	void CancelTeleport();
+
+	/** True when CancelTeleport would work right now (a shard is out). Handy for the HUD. */
+	UFUNCTION(BlueprintPure, Category = "Teleport")
+	bool CanCancelTeleport() const { return State == ETeleportAbilityState::InFlight || State == ETeleportAbilityState::Armed; }
 
 	UFUNCTION(BlueprintPure, Category = "Teleport")
 	bool IsOnCooldown() const { return State == ETeleportAbilityState::Cooldown; }
@@ -173,6 +186,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
 	FOnTeleportSimpleEvent OnAbilityReset;
 
+	/** The player cancelled the thrown shard (CancelTeleport). Use for a "poof" effect / sound. */
+	UPROPERTY(BlueprintAssignable, Category = "Teleport|Events")
+	FOnTeleportSimpleEvent OnTeleportCancelled;
+
 	// ---------- Settings ----------
 	/** Locked until the player unlocks it. Tick this in the character defaults while testing. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Teleport")
@@ -217,6 +234,11 @@ public:
 	/** Also apply the cooldown if the projectile is lost without teleporting. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Cooldown")
 	bool bCooldownOnFizzle = true;
+
+	/** Cooldown after cancelling a thrown shard (CancelTeleport). 0 = ready immediately.
+	 *  Set it equal to CooldownDuration for a full cooldown. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Teleport|Cooldown", meta = (ClampMin = "0.0"))
+	float CancelCooldownDuration = 2.f;
 
 	// ---------- Momentum ----------
 	/** Share of the player's horizontal speed kept after teleporting. 0 = stop dead, 1 = keep all of it. */
@@ -317,7 +339,7 @@ private:
 	void PlayAimChangedSound() const; // Plays the configured shard sound when the aim pose changes
 	void ThrowProjectile();
 	void TryTeleport();
-	void StartCooldown();
+	void StartCooldown(float Duration = -1.f); // Duration < 0 = use CooldownDuration
 	void FinishCooldown();
 
 	/** Where the shard would spawn and how fast, for the current aim angle. Shared by the real throw and the preview. */
@@ -353,6 +375,7 @@ private:
 	TWeakObjectPtr<ACPP_TeleportShard> ActiveProjectile;
 	FTimerHandle AimCycleTimer;
 	FTimerHandle CooldownTimer;
+	float CurrentCooldownDuration = 0.f; // Length of the running cooldown (normal or cancel), for the HUD fraction
 
 	UPROPERTY(Transient)
 	TObjectPtr<UPaperGroupedSpriteComponent> PreviewSprites;
