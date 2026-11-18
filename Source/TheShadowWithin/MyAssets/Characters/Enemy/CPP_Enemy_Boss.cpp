@@ -19,6 +19,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MyAssets/UI/CPP_BossHealthBar.h"
 #include "Components/StaticMeshComponent.h"
+#include "MyAssets/Characters/Enemy/CPP_Enemy_Plush.h"
 
 ACPP_Enemy_Boss::ACPP_Enemy_Boss()
 {
@@ -47,6 +48,16 @@ void ACPP_Enemy_Boss::BeginPlay()
 		if (HealthBarWidgetInstance) {
 			HealthBarWidgetInstance->AddToViewport();
 			HealthBarWidgetInstance->SetBossHealthBarMax(enemyHP);
+		}
+	}
+
+	if (!enemy.IsEmpty()) {
+		remainingSpwnEnemy = enemy.Num();
+	}
+	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		ACPP_Enemy_Plush* spawnedEnemy = Cast<ACPP_Enemy_Plush>(enemyController->GetPawn());
+		if (spawnedEnemy) {
+			spawnedEnemy->OnSpawnDefeat.AddDynamic(this, &ACPP_Enemy_Boss::CanBossSpawnEnemies);
 		}
 	}
 
@@ -183,4 +194,36 @@ void ACPP_Enemy_Boss::DefeatEnemy_Implementation() {
 	}
 
 	
+}
+
+void ACPP_Enemy_Boss::CanBossSpawnEnemies(int defeatedAlly) {
+	if (remainingSpwnEnemy <= 1) {
+		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanSpawnBackUp", true);
+		}
+		remainingSpwnEnemy = enemy.Num();
+	}
+	else {
+		remainingSpwnEnemy -= defeatedAlly;
+	}
+}
+
+ACPP_Enemy_Plush* ACPP_Enemy_Boss::GetSummonedEnemy(int index) {
+
+	// Check if the index is valid
+	if (!enemy.IsValidIndex(index))
+	{
+		
+		return NULL;
+	}
+
+	return enemy[index];
+}
+
+int ACPP_Enemy_Boss::GetSummonedEnemyNum() {
+	return enemy.Num();
+}
+
+FVector ACPP_Enemy_Boss::GetSpawnLocation() {
+	return EnemySpawn->GetComponentLocation();
 }

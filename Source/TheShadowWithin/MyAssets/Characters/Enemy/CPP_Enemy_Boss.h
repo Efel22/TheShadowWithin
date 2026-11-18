@@ -90,6 +90,10 @@ protected:
 
 	void DefeatEnemy_Implementation() override;
 
+	void CanBossSpawnEnemies(int defeatedAlly);
+
+	int remainingSpwnEnemy = 0;
+
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Player Char. reference
@@ -100,6 +104,10 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	
+	//Setters and Getters
+	ACPP_Enemy_Plush* GetSummonedEnemy(int index);
+	int GetSummonedEnemyNum();
+
+	FVector GetSpawnLocation();
 
 };

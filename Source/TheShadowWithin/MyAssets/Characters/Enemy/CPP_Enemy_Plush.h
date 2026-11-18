@@ -8,6 +8,8 @@
 #include "CPP_Enemy_Plush.generated.h"
 
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpawnDefeat, int, defeatedCount);
+
 class ACPP_PlayerChar;
 class USphereComponent;
 class UBoxComponent;
@@ -164,6 +166,11 @@ protected:
 
 	void DefeatEnemy_Implementation() override;
 
+	void SummonEnemy_Implementation() override;
+
+	//~~~This is just for enemies that belong to the boss spawn ability
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Defeat")
+	bool bEnemyWasSpawnedByBoss = false;
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	// Player Char. reference
@@ -202,7 +209,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	
+	UPROPERTY(BlueprintAssignable, Category = "Spawned by boss")
+	FOnSpawnDefeat OnSpawnDefeat;
 
 	//~~~Enemy defeat
 	// Defeat();

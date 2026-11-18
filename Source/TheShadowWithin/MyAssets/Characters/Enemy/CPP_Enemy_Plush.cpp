@@ -290,7 +290,28 @@ void ACPP_Enemy_Plush::DefeatEnemy_Implementation() {
 		
 	}
 
+	SetActorLocation(startingLocation);
+
 	bHasBeenDefeated = true;
+
+	if (bEnemyWasSpawnedByBoss) {
+		OnSpawnDefeat.Broadcast(1);
+	}
+}
+
+void ACPP_Enemy_Plush::SummonEnemy_Implementation() {
+	GetSprite()->SetVisibility(true);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	AttackCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//StopAttack();
+
+	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		enemyController->GetAIPerceptionComponent()->SetSenseEnabled(UAISense_Sight::StaticClass(), true);
+		enemyController->GetBlackboardComponent()->SetValueAsBool("IsDead", false);
+
+	}
+
+	bHasBeenDefeated = false;
 }
 
 

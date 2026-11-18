@@ -37,4 +37,7 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void TurnEnemy(bool turn);
+
+	UFUNCTION(BlueprintNativeEvent)
+	void SummonEnemy();
 };
