@@ -52,14 +52,18 @@ void ACPP_Enemy_Boss::BeginPlay()
 	}
 
 	if (!enemy.IsEmpty()) {
-		remainingSpwnEnemy = enemy.Num();
+		remainingSpwnEnemy = enemy.Num() - 1;
 	}
-	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
-		ACPP_Enemy_Plush* spawnedEnemy = Cast<ACPP_Enemy_Plush>(enemyController->GetPawn());
+	/*if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		ACPP_Enemy_Plush* spawnedEnemy = Cast<ACPP_Enemy_Plush>(enemyController);
 		if (spawnedEnemy) {
 			spawnedEnemy->OnSpawnDefeat.AddDynamic(this, &ACPP_Enemy_Boss::CanBossSpawnEnemies);
+			spawnedEnemy->OnSpawnCreated.AddDynamic(this, &ACPP_Enemy_Boss::HasSpawnLimitReached);
+			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "Event dispatcher implemented");
 		}
-	}
+	}*/
+
+	
 
 }
 
@@ -196,15 +200,32 @@ void ACPP_Enemy_Boss::DefeatEnemy_Implementation() {
 	
 }
 
-void ACPP_Enemy_Boss::CanBossSpawnEnemies(int defeatedAlly) {
+void ACPP_Enemy_Boss::CanBossSpawnEnemies_Implementation(int defeatedAlly) {
 	if (remainingSpwnEnemy <= 1) {
 		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
-			enemyController->GetBlackboardComponent()->SetValueAsBool("CanSpawnBackUp", true);
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanSpawnBackUp", false);
 		}
-		remainingSpwnEnemy = enemy.Num();
+		enemyLimit = 0;
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, "Enemies are dead meat");
 	}
 	else {
 		remainingSpwnEnemy -= defeatedAlly;
+		GEngine->AddOnScreenDebugMessage(-1, 20.0f, FColor::Green, FString::FromInt(remainingSpwnEnemy));
+	}
+}
+
+void ACPP_Enemy_Boss::HasSpawnLimitReached_Implementation(int summonuedAlly) {
+	if (enemyLimit >= enemy.Num() - 1) {
+		if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+			enemyController->GetBlackboardComponent()->SetValueAsBool("CanSpawnBackUp", true);
+		}
+		
+		remainingSpwnEnemy = enemy.Num();
+		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, "Spawn Limit has been reached");
+	}
+	else {
+		enemyLimit += summonuedAlly;
+		GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Green, FString::FromInt(enemyLimit));
 	}
 }
 

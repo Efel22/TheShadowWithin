@@ -9,8 +9,10 @@
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpawnDefeat, int, defeatedCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpawnCreated, int, spawnedCount);
 
 class ACPP_PlayerChar;
+class ACPP_Enemy_Boss;
 class USphereComponent;
 class UBoxComponent;
 /**
@@ -168,6 +170,11 @@ protected:
 
 	void SummonEnemy_Implementation() override;
 
+	void LookForBoss();
+
+	UPROPERTY()
+	ACPP_Enemy_Boss* bossReference;
+
 	//~~~This is just for enemies that belong to the boss spawn ability
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Defeat")
 	bool bEnemyWasSpawnedByBoss = false;
@@ -212,6 +219,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Spawned by boss")
 	FOnSpawnDefeat OnSpawnDefeat;
 
+	UPROPERTY(BlueprintAssignable, Category = "Spawned by boss")
+	FOnSpawnCreated OnSpawnCreated;
 	//~~~Enemy defeat
 	// Defeat();
 

@@ -84,15 +84,20 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Enemy|Spawn")
 	TArray<ACPP_Enemy_Plush*> enemy;
 
+
 	//~~~Enemy defeat
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bHasBeenDefeated = false;
 
 	void DefeatEnemy_Implementation() override;
 
-	void CanBossSpawnEnemies(int defeatedAlly);
+	void CanBossSpawnEnemies_Implementation(int defeatedAlly) override;
 
 	int remainingSpwnEnemy = 0;
+
+	void HasSpawnLimitReached_Implementation(int summonuedAlly) override;
+
+	int enemyLimit = 0;
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -27,15 +27,17 @@ EBTNodeResult::Type UCPP_IncrementSummonIndex_BTTask::ExecuteTask(UBehaviorTreeC
 				auto const minIndex = 0;
 				auto const maxIndex = noOfPoints - 1;
 				auto index = bc->GetValueAsInt(GetSelectedBlackboardKey());
-				if (bDirectional) {
-					if (index >= maxIndex && Direction == EDirectionType::Forward) {
+				
+					if (index >= maxIndex) {
 						index = minIndex;
-						bc->SetValueAsBool(CanSpawnEnemiesBool.SelectedKeyName, false);
+						//bc->SetValueAsBool(CanSpawnEnemiesBool.SelectedKeyName, true);
+						GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "nothing happened");
 					}
 					else {
 						index++;
+						GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, "Increment Spawned enemy index");
 					}
-				}
+				
 				bc->SetValueAsInt(GetSelectedBlackboardKey(),  index % noOfPoints);
 
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);

@@ -42,7 +42,13 @@ EBTNodeResult::Type UCPP_SummonEnemy_BTTask::ExecuteTask(UBehaviorTreeComponent&
 				summonedEnemy->SetActorLocation(enemy->GetSpawnLocation());
 
 				if (summonedEnemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
-					ICPP_EnemyActionsInterface::Execute_SummonEnemy(enemy);
+					ICPP_EnemyActionsInterface::Execute_SummonEnemy(summonedEnemy);
+					//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, "Summon Enemy");
+				}
+
+				if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+					ICPP_EnemyActionsInterface::Execute_HasSpawnLimitReached(enemy, 1);
+					//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, "Summon Enemy");
 				}
 
 				FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
