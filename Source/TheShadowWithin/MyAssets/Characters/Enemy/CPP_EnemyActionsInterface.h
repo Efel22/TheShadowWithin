@@ -37,4 +37,14 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	void TurnEnemy(bool turn);
+
+	UFUNCTION(BlueprintNativeEvent)
+	void SummonEnemy();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void CanBossSpawnEnemies(int defeatedAlly);
+
+
+	UFUNCTION(BlueprintNativeEvent)
+	void HasSpawnLimitReached(int summonuedAlly);
 };
