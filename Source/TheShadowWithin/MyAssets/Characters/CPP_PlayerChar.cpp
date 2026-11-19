@@ -227,7 +227,8 @@ void ACPP_PlayerChar::Die()
 	// Insert Death Logic here?
 
 	// Play Sound
-	if (Sound_HasBeenDefeated)
+
+	/*if (Sound_HasBeenDefeated)
 	{
 		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
 			Sound_HasBeenDefeated,
@@ -235,7 +236,8 @@ void ACPP_PlayerChar::Die()
 			1.f,  // Volume
 			FMath::FRandRange(0.8f, 1.2f) // Random Pitch
 		);
-	}
+	}*/
+
 	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("Death Player!"));
 
 	// Player is alive

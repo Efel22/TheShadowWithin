@@ -83,7 +83,7 @@ void UCPP_ClimbWall_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 
 					if (!enemy->WasRecentlyRendered() && enemy->GetEnemyIsStuckClimbing())
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "RENDER UPON ME");
+						//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "RENDER UPON ME");
 						if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
 							ICPP_EnemyActionsInterface::Execute_EnemyIsLost(enemy);
 						}
@@ -117,7 +117,7 @@ EBTNodeResult::Type UCPP_ClimbWall_BTTask::AbortTask(UBehaviorTreeComponent& Own
 
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Successfully aborted");
+	//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "Successfully aborted");
 
 	return EBTNodeResult::Aborted;
 }
