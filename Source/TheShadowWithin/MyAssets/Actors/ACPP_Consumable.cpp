@@ -1,3 +1,4 @@
+
 #include "ACPP_Consumable.h"
 #include "MyAssets/Characters/CPP_PlayerChar.h"
 #include "PaperSpriteComponent.h"
@@ -138,11 +139,14 @@ void ACPP_Consumable::OnCollectionSphereOverlap(
 // *******************************************************************************
 void ACPP_Consumable::Collect(ACPP_PlayerChar* Player)
 {
-	// Make sure the player exists
-	if (!Player)
+	// Make sure the player exists and the consumable hasn't been collected
+	if (!IsValid(Player) || bHasBeenCollected)
 	{
 		return;
 	}
+
+	// Prevent the consumable from being collected multiple times
+	bHasBeenCollected = true;
 
 	// *******************************************************************************
 	//                             DARKNESS
@@ -169,16 +173,11 @@ void ACPP_Consumable::Collect(ACPP_PlayerChar* Player)
 	// Restore player health (This funciton doesn't exist yet)
 	//Player->AddHealth(RestoreAmount);
 
-	// Destroy this consumable if necessary
-	if (bDestroyOnCollect)
-	{
-		Destroy();
-	}
-
 	// Play the sound
 	if (CollectSound)
 	{
-		UGameplayStatics::PlaySoundAtLocation(GetWorld(),
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
 			CollectSound,
 			GetActorLocation(),
 			1.0f, // VOLUME
@@ -196,38 +195,48 @@ void ACPP_Consumable::Collect(ACPP_PlayerChar* Player)
 		);
 	}
 
+	// *******************************************************************************
+	//                             CONSUMABLE BEHAVIOR
+	// *******************************************************************************
+
 	// Get the teleport component and store it
 	UTeleportAbilityComponent* TP_Comp = Player->GetComponentByClass<UTeleportAbilityComponent>();
 
-	// CHECK IF VALID
-	if (TP_Comp) {
+	// Consumable behavior switch
+	switch (ConsumableType)
+	{
+	case EConsumableType::ActivatesTeleportation:
 
-		// Debug
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green, TEXT("TeleportComponent: Is NOT null"));
-
-		// Consumable behavior switch
-		switch (ConsumableType)
+		if (TP_Comp)
 		{
-
-		case EConsumableType::ActivatesTeleportation:
 			TP_Comp->SetUnlocked(true);
-			break;
-
-		case EConsumableType::RemovesTeleportation:
-			TP_Comp->SetUnlocked(false);
-			break;
-
-		// EConsumableType::Generic: //
-		default:
-			break;
 		}
+		break;
 
-	}
-	else {
-		// Debug
-		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Red, TEXT("TeleportComponent: Is NULL"));
+	case EConsumableType::RemovesTeleportation:
+
+		if (TP_Comp)
+		{
+			TP_Comp->SetUnlocked(false);
+		}
+		break;
+
+	case EConsumableType::ActivatesBossFight:
+
+		// Notify Blueprint to activate the boss room prevention box
+		OnActivateBossFight();
+		break;
+
+	case EConsumableType::Generic:
+	default:
+		break;
 	}
 
+	// Destroy this consumable if necessary
+	if (bDestroyOnCollect)
+	{
+		Destroy();
+	}
 }
 
 bool ACPP_Consumable::RequiresInput() const

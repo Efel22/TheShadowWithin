@@ -16,9 +16,10 @@ class ACPP_PlayerChar;
 UENUM(BlueprintType)
 enum class EFairyState : uint8
 {
-	Following, // Follows and flies around the player
-	Guiding,   // Flies towards the nearest consumable
-	Returning  // Returns to the player
+	Following,    // Follows and flies around the player
+	Guiding,      // Flies towards the nearest consumable
+	AtConsumable, // Flies around the consumable before returning
+	Returning    // Returns to the player
 };
 
 UCLASS()
@@ -31,7 +32,6 @@ public:
 	ACPP_Fairy();
 
 protected:
-
 	// Stores the fairy's flipbook
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Visual")
 	UPaperFlipbookComponent* FairyFlipbookComp;
@@ -42,12 +42,35 @@ protected:
 
 	// Stores the particles used to guide the player towards the nearest consumable
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance")
-	UNiagaraSystem* Fairy_GuidanceParticles;
+	UNiagaraSystem* Fairy_GuidanceParticles = nullptr;
 
 	// Sound that plays when the fairy points towards a consumable
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Audio")
-	USoundBase* Fairy_GuidanceSound;
+	USoundBase* Fairy_GuidanceSound = nullptr;
 
+	// *******************************************************************************
+	//                                  SHARD EFFECTS
+	// *******************************************************************************
+
+	// Active only while the fairy is flying towards a consumable
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Guidance")
+	UNiagaraComponent* Fairy_FlyingParticlesComp;
+
+	// Active only while the fairy is floating around a consumable
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Guidance")
+	UNiagaraComponent* Fairy_ShardOrbitParticlesComp;
+
+	// Plays one time when the fairy reaches the consumable
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance")
+	UNiagaraSystem* Fairy_ShardFoundParticles = nullptr;
+
+	// Plays one time when the fairy reaches the consumable
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Audio")
+	USoundBase* Fairy_ShardFoundSound = nullptr;
+
+	// Plays one time when the fairy starts floating around the consumable
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Audio")
+	USoundBase* Fairy_ShardOrbitSound = nullptr;
 
 	// *******************************************************************************
 	//                                  MOVEMENT
@@ -55,7 +78,7 @@ protected:
 
 	// Stores the player the fairy will follow
 	UPROPERTY()
-	ACPP_PlayerChar* Player;
+	ACPP_PlayerChar* Player = nullptr;
 
 	// How fast the fairy follows the player
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Movement")
@@ -71,7 +94,7 @@ protected:
 
 	// Stores the Y position of the fairy
 	// ?: The fairy should NEVER move in the Y axis
-	float LockedY;
+	float LockedY = 0.f;
 
 	// Stores what the fairy is currently doing
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Movement")
@@ -89,6 +112,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance")
 	float GuidanceWaitTime = 1.5f;
 
+	// Radius of the fairy's orbit around the consumable
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance", meta = (ClampMin = "0.0"))
+	float ShardOrbitRadius = 35.f;
+
+	// Speed of the fairy's orbit around the consumable
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance", meta = (ClampMin = "0.0"))
+	float ShardOrbitSpeed = 4.f;
+
 	// How close the fairy needs to be to the player before returning to normal
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Movement")
 	float ReturnDistance = 150.f;
@@ -102,10 +133,10 @@ protected:
 
 	// Stores the nearest consumable to the player
 	UPROPERTY()
-	ACPP_Consumable* NearestConsumable;
+	ACPP_Consumable* NearestConsumable = nullptr;
 
 	// Maximum distance at which the fairy can detect consumables
-// ?: Consumables outside this radius will be ignored
+	// ?: Consumables outside this radius will be ignored
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components|Guidance", meta = (ClampMin = "0.0"))
 	float SearchRadius = 500.f;
 
@@ -122,7 +153,6 @@ protected:
 
 	// Timer used to activate the fairy's guidance
 	FTimerHandle GuidanceTimer;
-
 
 	// *******************************************************************************
 	//                                  FUNCTIONS
@@ -143,6 +173,12 @@ protected:
 	// Makes the fairy fly towards the nearest consumable
 	void FlyToConsumable(float DeltaTime);
 
+	// Makes the fairy float around the consumable for GuidanceWaitTime
+	void OrbitConsumable(float DeltaTime);
+
+	// Plays arrival effects only once and starts the waiting timer
+	void ReachConsumable();
+
 	// Makes the fairy return to the player
 	void ReturnToPlayer();
 
@@ -152,5 +188,4 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
-
 };

@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "CoreMinimal.h"
@@ -18,11 +19,12 @@ enum class EConsumableType : uint8
 {
 	ActivatesTeleportation, // Activates the player's ability to teleport
 	RemovesTeleportation,   // Removes the player's ability to teleport
-	Generic                 // Does nothing
+	Generic,                // Does nothing
+	ActivatesBossFight      // Activates the boss room prevention box
 };
 
 UCLASS()
-class THESHADOWWITHIN_API ACPP_Consumable 
+class THESHADOWWITHIN_API ACPP_Consumable
 	: public AActor, public ICollectableInterface
 {
 	GENERATED_BODY()
@@ -40,14 +42,15 @@ public:
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
 protected:
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	// Defines behavior by the consumable whenever its collected 
+	// Defines behavior by the consumable whenever its collected
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components | Behavior")
-	EConsumableType ConsumableType = EConsumableType::Generic; // Does nothing by default 
+	EConsumableType ConsumableType = EConsumableType::Generic; // Does nothing by default
 
 	// Sprite displayed in the world
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Visual")
@@ -80,6 +83,18 @@ protected:
 	// If true, destroy the consumable after collection
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collectable")
 	bool bDestroyOnCollect = true;
+
+	// Prevents the same consumable from being collected multiple times
+	bool bHasBeenCollected = false;
+
+	// *******************************************************************************
+	//                             BOSS FIGHT
+	// *******************************************************************************
+
+	// Called when a consumable with ActivatesBossFight is collected
+	// Implement this event in the consumable's Blueprint
+	UFUNCTION(BlueprintImplementableEvent, Category = "Consumable | Boss Fight")
+	void OnActivateBossFight();
 
 	// *******************************************************************************
 	//                             DARKNESS
