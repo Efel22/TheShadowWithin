@@ -62,7 +62,7 @@ void UCPP_MoveEnemy_BTTask::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* N
 					
 					if (FMath::IsNearlyZero(DirectionX, 1.f) && !enemy->WasRecentlyRendered() && !enemy->GetEnemyIsLost())
 					{
-						GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "RENDER UPON ME");
+						//GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::White, "RENDER UPON ME");
 						if (enemy->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
 							ICPP_EnemyActionsInterface::Execute_EnemyIsLost(enemy);
 						}

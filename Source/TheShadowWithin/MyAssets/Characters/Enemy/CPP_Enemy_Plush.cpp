@@ -16,6 +16,7 @@
 #include "PaperFlipbookComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/Engine.h" // Required for on-screen rotation debugging
+#include "MyAssets/Characters/Enemy/CPP_Enemy_Boss.h"
 
 // *******************************************************************************
 //                             CONSTRUCTOR
@@ -290,9 +291,73 @@ void ACPP_Enemy_Plush::DefeatEnemy_Implementation() {
 		
 	}
 
+	SetActorLocation(startingLocation);
+
 	bHasBeenDefeated = true;
+
+	if (bEnemyWasSpawnedByBoss) {
+		//OnSpawnDefeat.Broadcast(1);
+		
+		LookForBoss();
+		if (bossReference) {
+			if (bossReference->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+				ICPP_EnemyActionsInterface::Execute_CanBossSpawnEnemies(bossReference, 1);
+			}
+		}
+	}
 }
 
+void ACPP_Enemy_Plush::SummonEnemy_Implementation() {
+	GetSprite()->SetVisibility(true);
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	AttackCollider->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	//StopAttack();
+
+	if (ACPP_EnemyAiController* enemyController = Cast<ACPP_EnemyAiController>(GetController())) {
+		enemyController->GetAIPerceptionComponent()->SetSenseEnabled(UAISense_Sight::StaticClass(), true);
+		enemyController->GetBlackboardComponent()->SetValueAsBool("IsDead", false);
+
+	}
+
+	bHasBeenDefeated = false;
+
+	//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::Red, "Repawn Enemy");
+
+	if (bEnemyWasSpawnedByBoss) {
+		//OnSpawnCreated.Broadcast(1);
+		/*
+		LookForBoss();
+		if (bossReference) {
+			//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::White, "The Boss is here, Lets help him");
+			if (bossReference->GetClass()->ImplementsInterface(UCPP_EnemyActionsInterface::StaticClass())) {
+				ICPP_EnemyActionsInterface::Execute_HasSpawnLimitReached(bossReference, 1);
+			}
+		}
+		*/
+	}
+}
+
+void ACPP_Enemy_Plush::LookForBoss() {
+	FHitResult hit;
+	FVector start = GetActorLocation();
+	FVector end = GetActorLocation();
+	FQuat rot = FQuat(0, 0, 0, 0);
+	FCollisionShape sphere = FCollisionShape::MakeSphere(5000);
+	FCollisionQueryParams traceParams;
+	traceParams.AddIgnoredActor(this);
+
+	FCollisionObjectQueryParams objectType;
+	//~~~Adds a specific object type to search, In this case it will be the pawn object type
+	objectType.AddObjectTypesToQuery(ECC_Pawn);
+
+	if (GetWorld()->SweepSingleByObjectType(hit, start, end, rot, objectType, sphere, traceParams)) {
+
+		bossReference = Cast<ACPP_Enemy_Boss>(hit.GetActor());
+		//GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::White, "Found Boss");
+		
+	}
+	
+}
 
 //~~~Enemy Return To Patrol when lost
 void ACPP_Enemy_Plush::EnemyIsLost_Implementation() {
