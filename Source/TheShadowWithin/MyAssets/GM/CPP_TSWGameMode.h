@@ -7,6 +7,7 @@
 
 class UMaterialInterface;
 class UMaterialInstanceDynamic;
+class UCameraComponent;
 
 UCLASS()
 class THESHADOWWITHIN_API ACPP_TSWGameMode : public AGameModeBase
@@ -147,4 +148,13 @@ public:
 	// Restores the original screen colors
 	UFUNCTION(BlueprintCallable, Category = "Post Process | Tint")
 	void ResetTint(float TransitionDuration = 1.0f);
+
+	// *******************************************************************************
+	//                             POST PROCESS FUNCTIONS
+	// *******************************************************************************
+
+	// Applies the existing post process material to another camera
+	// ?: All cameras share the same dynamic material and its current values
+	UFUNCTION(BlueprintCallable, Category = "Post Process")
+	void ApplyPostProcessToCamera(UCameraComponent* Camera);
 };

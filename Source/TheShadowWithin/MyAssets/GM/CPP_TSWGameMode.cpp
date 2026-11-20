@@ -62,11 +62,8 @@ void ACPP_TSWGameMode::BeginPlay()
 		return;
 	}
 
-	// Add the post process material to the player's camera
-	PlayerChar->GetCamera()->AddOrUpdateBlendable(
-		DarknessMaterialDynamic,
-		1.0f
-	);
+	// Apply the post process material to the player's camera
+	ApplyPostProcessToCamera(PlayerChar->GetCamera());
 
 	// Start the darkness increment timer (its on a loop)
 	StartDarknessTimer();
@@ -334,5 +331,24 @@ void ACPP_TSWGameMode::ResetTint(float TransitionDuration)
 		FLinearColor::White,
 		0.0f,
 		TransitionDuration
+	);
+}
+
+// *******************************************************************************
+//                             APPLY POST PROCESS TO CAMERA
+// *******************************************************************************
+void ACPP_TSWGameMode::ApplyPostProcessToCamera(UCameraComponent* Camera)
+{
+	// Make sure the camera and material exist
+	if (!IsValid(Camera) || !IsValid(DarknessMaterialDynamic))
+	{
+		return;
+	}
+
+	// Apply the same dynamic material to the specified camera
+	// ?: This keeps darkness, tint color and tint strength synchronized
+	Camera->AddOrUpdateBlendable(
+		DarknessMaterialDynamic,
+		1.0f
 	);
 }
