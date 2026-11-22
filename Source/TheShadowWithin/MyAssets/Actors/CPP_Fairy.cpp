@@ -2,6 +2,7 @@
 
 
 #include "CPP_Fairy.h"
+#include "Components/SceneComponent.h"
 #include "PaperFlipbookComponent.h" // Required for flipbook component
 #include "NiagaraSystem.h" // Required for niagara system usage
 #include "NiagaraComponent.h" // Required for niagara component
@@ -29,6 +30,16 @@ ACPP_Fairy::ACPP_Fairy()
 	// Setup the fairy's ongoing particles
 	Fairy_OnGoingParticlesComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Fairy Ongoing Particles"));
 	Fairy_OnGoingParticlesComp->SetupAttachment(FairyFlipbookComp);
+
+	// Particles that play only while flying towards a consumable
+	Fairy_FlyingParticlesComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Fairy Flying Particles"));
+	Fairy_FlyingParticlesComp->SetupAttachment(RootComponent);
+	Fairy_FlyingParticlesComp->SetAutoActivate(false);
+
+	// Particles that play only while floating around a consumable
+	Fairy_ShardOrbitParticlesComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Fairy Shard Orbit Particles"));
+	Fairy_ShardOrbitParticlesComp->SetupAttachment(RootComponent);
+	Fairy_ShardOrbitParticlesComp->SetAutoActivate(false);
 }
 
 
@@ -50,6 +61,10 @@ void ACPP_Fairy::BeginPlay()
 		return;
 	}
 
+	// Make sure the guidance-only effects are initially off
+	Fairy_FlyingParticlesComp->Deactivate();
+	Fairy_ShardOrbitParticlesComp->Deactivate();
+
 	// Lock the fairy to the player's Y position
 	// ?: The fairy should NEVER move in the Y axis
 	LockedY = Player->GetActorLocation().Y;
@@ -64,7 +79,7 @@ void ACPP_Fairy::BeginPlay()
 		SearchTimer,
 		this,
 		&ACPP_Fairy::FindNearestConsumable,
-		SearchInterval,
+		FMath::Max(0.1f, SearchInterval),
 		true
 	);
 
@@ -73,7 +88,7 @@ void ACPP_Fairy::BeginPlay()
 		GuidanceTimer,
 		this,
 		&ACPP_Fairy::GuidePlayerToConsumable,
-		GuidanceInterval,
+		FMath::Max(0.1f, GuidanceInterval),
 		true
 	);
 
@@ -88,7 +103,13 @@ void ACPP_Fairy::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// Safety check
-	if (!Player) return;
+	if (!IsValid(Player)) return;
+
+	// Return immediately if the target disappeared during guidance or waiting
+	if ((FairyState == EFairyState::Guiding || FairyState == EFairyState::AtConsumable) && !IsValid(NearestConsumable))
+	{
+		ReturnToPlayer();
+	}
 
 	switch (FairyState)
 	{
@@ -103,6 +124,13 @@ void ACPP_Fairy::Tick(float DeltaTime)
 	case EFairyState::Guiding:
 
 		FlyToConsumable(DeltaTime);
+
+		break;
+
+		// Float around the consumable until the waiting timer finishes
+	case EFairyState::AtConsumable:
+
+		OrbitConsumable(DeltaTime);
 
 		break;
 
@@ -194,7 +222,7 @@ void ACPP_Fairy::FollowPlayer(float DeltaTime)
 		}
 	}
 }
- 
+
 // *******************************************************************************
 //                                FLIP FAIRY
 // *******************************************************************************
@@ -225,7 +253,10 @@ void ACPP_Fairy::FlipFairy(float DirectionX)
 void ACPP_Fairy::FindNearestConsumable()
 {
 	// Safety check
-	if (!Player) return;
+	if (!IsValid(Player)) return;
+
+	// Do not change the target in the middle of a guidance sequence
+	if (FairyState != EFairyState::Following) return;
 
 	// Stores all consumables currently in the world
 	TArray<AActor*> Consumables;
@@ -292,13 +323,16 @@ void ACPP_Fairy::FindNearestConsumable()
 void ACPP_Fairy::GuidePlayerToConsumable()
 {
 	// Safety check
-	if (!NearestConsumable) return;
+	if (!IsValid(NearestConsumable)) return;
 
 	// Don't start another guidance if the fairy is already guiding
 	if (FairyState != EFairyState::Following) return;
 
 	// Change the fairy's state
 	FairyState = EFairyState::Guiding;
+
+	// Start the particles that follow the fairy during the flight
+	Fairy_FlyingParticlesComp->Activate(true);
 
 	// Get the fairy and consumable positions
 	FVector FairyLocation = GetActorLocation();
@@ -310,13 +344,13 @@ void ACPP_Fairy::GuidePlayerToConsumable()
 	// Ignore the Y axis
 	Direction.Y = 0.f;
 
-	// Safety check
-	if (Direction.IsNearlyZero()) return;
-
-	Direction.Normalize();
-
-	// Get the rotation that points towards the consumable
-	FRotator GuidanceRotation = Direction.Rotation();
+	// Avoid an invalid direction if the fairy is already at the target
+	FRotator GuidanceRotation = FRotator::ZeroRotator;
+	if (!Direction.IsNearlyZero())
+	{
+		Direction.Normalize();
+		GuidanceRotation = Direction.Rotation();
+	}
 
 	// Spawn the guidance particles
 	if (Fairy_GuidanceParticles)
@@ -350,9 +384,9 @@ void ACPP_Fairy::FlyToConsumable(float DeltaTime)
 {
 	// Safety check
 	// ?: If the consumable no longer exists, return to the player
-	if (!NearestConsumable)
+	if (!IsValid(NearestConsumable))
 	{
-		FairyState = EFairyState::Returning;
+		ReturnToPlayer();
 		return;
 	}
 
@@ -400,11 +434,62 @@ void ACPP_Fairy::FlyToConsumable(float DeltaTime)
 	// Check if the fairy has reached the consumable
 	if (DistanceToConsumable <= ConsumableReachDistance)
 	{
-		// Change the fairy's state so it doesn't continue flying towards the consumable
-		FairyState = EFairyState::Returning;
+		ReachConsumable();
+	}
+}
 
-		// Wait before returning to the player
-		GetWorld()->GetTimerManager().SetTimer(
+
+// *******************************************************************************
+//                              REACH CONSUMABLE
+// *******************************************************************************
+// ?: Called once when the fairy finds / reaches the shard
+void ACPP_Fairy::ReachConsumable()
+{
+	if (FairyState != EFairyState::Guiding || !IsValid(NearestConsumable)) return;
+
+	// Stop the particles that only appear while flying towards the shard
+	Fairy_FlyingParticlesComp->Deactivate();
+
+	// Change state BEFORE activating effects, so arrival only happens once
+	FairyState = EFairyState::AtConsumable;
+
+	// Spawn the one-shot effect when the fairy finds the shard
+	if (Fairy_ShardFoundParticles)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			Fairy_ShardFoundParticles,
+			GetActorLocation()
+		);
+	}
+
+	// Play a sound once when the shard is found
+	if (Fairy_ShardFoundSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			Fairy_ShardFoundSound,
+			GetActorLocation()
+		);
+	}
+
+	// Start the particles that appear while floating around the shard
+	Fairy_ShardOrbitParticlesComp->Activate(true);
+
+	// Play a sound once upon starting the orbit (NOT every frame)
+	if (Fairy_ShardOrbitSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			Fairy_ShardOrbitSound,
+			GetActorLocation()
+		);
+	}
+
+	// Wait near the shard before returning to the player
+	if (GuidanceWaitTime > 0.f)
+	{
+		GetWorldTimerManager().SetTimer(
 			ReturnTimer,
 			this,
 			&ACPP_Fairy::ReturnToPlayer,
@@ -412,6 +497,41 @@ void ACPP_Fairy::FlyToConsumable(float DeltaTime)
 			false
 		);
 	}
+	else
+	{
+		ReturnToPlayer();
+	}
+}
+
+
+// *******************************************************************************
+//                              ORBIT CONSUMABLE
+// *******************************************************************************
+// ?: Makes the fairy float around the shard while waiting
+void ACPP_Fairy::OrbitConsumable(float DeltaTime)
+{
+	if (!IsValid(NearestConsumable))
+	{
+		ReturnToPlayer();
+		return;
+	}
+
+	float CurrentTime = GetWorld()->GetTimeSeconds();
+	FVector ShardLocation = NearestConsumable->GetActorLocation();
+
+	// Keep all movement on the X/Z plane
+	FVector TargetLocation(
+		ShardLocation.X + FMath::Cos(CurrentTime * ShardOrbitSpeed) * ShardOrbitRadius,
+		LockedY,
+		ShardLocation.Z + FMath::Sin(CurrentTime * ShardOrbitSpeed) * ShardOrbitRadius
+	);
+
+	FVector CurrentLocation = GetActorLocation();
+	FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, GuidanceFlySpeed);
+	NewLocation.Y = LockedY;
+
+	FlipFairy(NewLocation.X - CurrentLocation.X);
+	SetActorLocation(NewLocation);
 }
 
 
@@ -421,5 +541,11 @@ void ACPP_Fairy::FlyToConsumable(float DeltaTime)
 // ?: Makes the fairy return to following the player
 void ACPP_Fairy::ReturnToPlayer()
 {
+	GetWorldTimerManager().ClearTimer(ReturnTimer);
+
+	// Stop state-specific particles when leaving the shard
+	Fairy_FlyingParticlesComp->Deactivate();
+	Fairy_ShardOrbitParticlesComp->Deactivate();
+
 	FairyState = EFairyState::Returning;
 }

@@ -3,8 +3,10 @@
 
 #include "Components/SceneComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "PaperSpriteComponent.h"
 #include "NiagaraComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 #include "MyAssets/Characters/CPP_PlayerChar.h"
 #include "MyAssets/Actors/ACPP_Consumable.h"
@@ -54,7 +56,22 @@ ACPP_PathObstruction::ACPP_PathObstruction()
     ActivationBox->SetCollisionResponseToAllChannels(ECR_Ignore);
     ActivationBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
     ActivationBox->SetGenerateOverlapEvents(true);
-    ActivationBox->OnComponentBeginOverlap.AddDynamic( this, &ACPP_PathObstruction::OnActivationBoxOverlap);
+    ActivationBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_PathObstruction::OnActivationBoxOverlap);
+
+    // ********************************************************
+    //                   PROXIMITY COLLISION
+    // ********************************************************
+
+    // Detect when the player gets close to the obstruction
+    ProximityBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ProximityBox"));
+    ProximityBox->SetupAttachment(RootComponent);
+    ProximityBox->SetLineThickness(25.f);
+    ProximityBox->SetBoxExtent(FVector(200.f, 80.f, 120.f));
+    ProximityBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    ProximityBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+    ProximityBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+    ProximityBox->SetGenerateOverlapEvents(true);
+    ProximityBox->OnComponentBeginOverlap.AddDynamic(this, &ACPP_PathObstruction::OnProximityBoxOverlap);
 }
 
 // ********************************************************
@@ -197,6 +214,23 @@ void ACPP_PathObstruction::RemoveObstruction()
         ObstructionParticlesComponent->Deactivate();
     }
 
+    // Disable proximity detection after the obstruction is removed
+    if (ProximityBox)
+    {
+        ProximityBox->SetCollisionEnabled(
+            ECollisionEnabled::NoCollision);
+    }
+
+    // Play Sound
+    if (Sound_ObstructionRemoved)
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            GetWorld(),
+            Sound_ObstructionRemoved,
+            GetActorLocation()
+        );
+    }
+
     // Allow player detection
     if (ActivationBox)
     {
@@ -241,6 +275,56 @@ void ACPP_PathObstruction::OnActivationBoxOverlap(
     }
 
     ActivateTaggedEnemies();
+}
+
+// ********************************************************
+//                    PROXIMITY DETECTION
+// ********************************************************
+
+void ACPP_PathObstruction::OnProximityBoxOverlap(
+    UPrimitiveComponent* OverlappedComponent,
+    AActor* OtherActor,
+    UPrimitiveComponent* OtherComp,
+    int32 OtherBodyIndex,
+    bool bFromSweep,
+    const FHitResult& SweepResult
+)
+{
+    // Only play the sound while the obstruction is active
+    if (bRequirementsMet || !BlockingBox)
+    {
+        return;
+    }
+
+    // Make sure the blocking collision is still enabled
+    if (BlockingBox->GetCollisionEnabled() == ECollisionEnabled::NoCollision)
+    {
+        return;
+    }
+
+    // Only detect the player
+    ACPP_PlayerChar* Player = Cast<ACPP_PlayerChar>(OtherActor);
+
+    if (!Player || Player->IsDead())
+    {
+        return;
+    }
+
+    // Only react to the player's capsule to avoid duplicate sounds
+    if (OtherComp != Player->GetCapsuleComponent())
+    {
+        return;
+    }
+
+    // Play Sound
+    if (Sound_PlayerNearby)
+    {
+        UGameplayStatics::PlaySoundAtLocation(
+            GetWorld(),
+            Sound_PlayerNearby,
+            GetActorLocation()
+        );
+    }
 }
 
 // ********************************************************

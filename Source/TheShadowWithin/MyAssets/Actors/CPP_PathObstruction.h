@@ -8,6 +8,7 @@
 class UBoxComponent;
 class UPaperSpriteComponent;
 class UNiagaraComponent;
+class USoundBase;
 class ACPP_PlayerChar;
 class ACPP_Consumable;
 
@@ -35,11 +36,27 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UBoxComponent* ActivationBox;
 
+    // Detects when the player approaches the obstruction
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UBoxComponent* ProximityBox;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Visual")
     UPaperSpriteComponent* SpriteComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components | Visual")
     UNiagaraComponent* ObstructionParticlesComponent;
+
+    // ********************************************************
+    //                         SOUNDS
+    // ********************************************************
+
+    // Plays when the player approaches an active obstruction
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Path Obstruction | Sounds")
+    USoundBase* Sound_PlayerNearby = nullptr;
+
+    // Plays when the obstruction is removed
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Path Obstruction | Sounds")
+    USoundBase* Sound_ObstructionRemoved = nullptr;
 
     // ********************************************************
     //                       REQUIREMENTS
@@ -84,6 +101,7 @@ protected:
     // Activates enemies with EnemyActivationTag
     void ActivateTaggedEnemies();
 
+    // Called when the player enters the activation box
     UFUNCTION()
     void OnActivationBoxOverlap(
         UPrimitiveComponent* OverlappedComponent,
@@ -93,6 +111,21 @@ protected:
         bool bFromSweep,
         const FHitResult& SweepResult
     );
+
+    // Called when the player approaches the obstruction
+    UFUNCTION()
+    void OnProximityBoxOverlap(
+        UPrimitiveComponent* OverlappedComponent,
+        AActor* OtherActor,
+        UPrimitiveComponent* OtherComp,
+        int32 OtherBodyIndex,
+        bool bFromSweep,
+        const FHitResult& SweepResult
+    );
+
+    // ********************************************************
+    //                      BLUEPRINT EVENTS
+    // ********************************************************
 
     UFUNCTION(BlueprintImplementableEvent, Category = "Path Obstruction | Enemies")
     void OnActivateEnemy(AActor* Enemy);
